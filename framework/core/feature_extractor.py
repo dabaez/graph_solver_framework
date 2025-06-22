@@ -1,8 +1,9 @@
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from framework.core.graph import Dataset, Feature, Graph
+from framework.core.graph import Dataset, Feature, FrameworkGraph
 
 
+@runtime_checkable
 class DatasetFeatureExtractor(Protocol):
     """Base class for dataset feature extractors."""
 
@@ -16,10 +17,11 @@ class DatasetFeatureExtractor(Protocol):
         ...
 
 
+@runtime_checkable
 class GraphFeatureExtractor(Protocol):
     """Base class for graph feature extractors."""
 
-    def extract_features(self, graph: Graph) -> list[Feature]:
+    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
         """
         Extract features from the graph.
 

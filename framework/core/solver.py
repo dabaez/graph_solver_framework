@@ -1,8 +1,9 @@
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
-from framework.core.graph import Dataset, Graph, MaximumIndependentSet
+from framework.core.graph import Dataset, FrameworkGraph, MaximumIndependentSet
 
 
+@runtime_checkable
 class DatasetSolver(Protocol):
     """Base class for solvers."""
 
@@ -16,10 +17,11 @@ class DatasetSolver(Protocol):
         ...
 
 
+@runtime_checkable
 class GraphSolver(Protocol):
     """Base class for graph solvers."""
 
-    def solve_graph(self, graph: Graph) -> MaximumIndependentSet:
+    def solve_graph(self, graph: FrameworkGraph) -> MaximumIndependentSet:
         """
         Solve the problem using the given graph.
 
