@@ -19,7 +19,3 @@ class FrameworkGraph:
 
 
 Dataset = NewType("Dataset", list[FrameworkGraph])
-
-
-def DatasetFromNetworkX(graphs: list[Graph]) -> Dataset:
-    return Dataset([FrameworkGraph(graph_object=graph) for graph in graphs])

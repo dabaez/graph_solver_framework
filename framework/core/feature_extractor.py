@@ -1,6 +1,6 @@
 from typing import Protocol, runtime_checkable
 
-from framework.core.graph import Dataset, Feature, FrameworkGraph
+from framework.core.graph import Dataset, Feature
 
 
 @runtime_checkable
@@ -15,42 +15,3 @@ class DatasetFeatureExtractor(Protocol):
         :return: A list of lists of features extracted from the dataset.
         """
         ...
-
-
-@runtime_checkable
-class GraphFeatureExtractor(Protocol):
-    """Base class for graph feature extractors."""
-
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
-        """
-        Extract features from the graph.
-
-        :param graph: The graph from which to extract features.
-        :return: A list of features extracted from the graph.
-        """
-        ...
-
-
-class DatasetFeatureExtractorFromGraphFeatureExtractor:
-    """
-    A feature extractor that uses a GraphFeatureExtractor to extract features from graphs in a dataset.
-    """
-
-    def __init__(self, graph_feature_extractor: GraphFeatureExtractor):
-        """
-        Initializes the extractor with a GraphFeatureExtractor instance.
-
-        :param graph_feature_extractor: An instance of GraphFeatureExtractor.
-        """
-        self.graph_feature_extractor = graph_feature_extractor
-
-    def extract_features(self, dataset: Dataset) -> list[list[Feature]]:
-        """
-        Extract features from each graph in the dataset.
-
-        :param dataset: The dataset from which to extract features.
-        :return: A list of lists of features extracted from each graph in the dataset.
-        """
-        return [
-            self.graph_feature_extractor.extract_features(graph) for graph in dataset
-        ]
