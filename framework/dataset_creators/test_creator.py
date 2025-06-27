@@ -3,7 +3,8 @@ from typing import Any
 import networkx as nx
 
 from framework.core.dataset_creator import RequiredParameter
-from framework.core.graph import Dataset, DatasetFromNetworkX
+from framework.core.factories import DatasetFromNetworkX
+from framework.core.graph import Dataset
 
 
 class TestDatasetCreator:
