@@ -20,6 +20,6 @@ class TestGraphFeatureExtractor:
         return [number_of_nodes, number_of_edges, average_degree]
 
 
-DatasetFeatureExtractorFromGraphFeatureExtractor(
+TestDatasetExtractor = DatasetFeatureExtractorFromGraphFeatureExtractor(
     TestGraphFeatureExtractor, "test_graph_feature_extractor"
 )
