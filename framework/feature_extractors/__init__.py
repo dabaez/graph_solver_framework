@@ -1,1 +1,1 @@
-from test_extractor import TestDatasetExtractor
+from .test_extractor import TestDatasetExtractor
