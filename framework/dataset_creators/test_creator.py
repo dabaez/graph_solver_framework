@@ -5,8 +5,10 @@ import networkx as nx
 from framework.core.dataset_creator import RequiredParameter
 from framework.core.factories import DatasetFromNetworkX
 from framework.core.graph import Dataset
+from framework.core.registries import register_dataset_creator
 
 
+@register_dataset_creator("test_creator")
 class TestDatasetCreator:
     @property
     def required_parameters(self) -> list[RequiredParameter]:
