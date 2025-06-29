@@ -35,7 +35,7 @@ class GraphFeatureExtractor(Protocol):
 
 
 def DatasetFeatureExtractorFromGraphFeatureExtractor(
-    GraphFeatureExtractor: GraphFeatureExtractor, name: str
+    GraphFeatureExtractor: Type[GraphFeatureExtractor], name: str
 ) -> Type[DatasetFeatureExtractor]:
     """
     A feature extractor that uses a GraphFeatureExtractor to extract features from each graph in a dataset.
@@ -50,7 +50,10 @@ def DatasetFeatureExtractorFromGraphFeatureExtractor(
             :param dataset: The dataset from which to extract features.
             :return: A list of lists of features extracted from each graph in the dataset.
             """
-            return [GraphFeatureExtractor.extract_features(graph) for graph in dataset]
+            graph_feature_extractor = GraphFeatureExtractor()
+            return [
+                graph_feature_extractor.extract_features(graph) for graph in dataset
+            ]
 
     return DatasetFeatureExtractorImpl
 
@@ -73,7 +76,7 @@ class GraphSolver(Protocol):
 
 
 def DatasetSolverFromGraphSolver(
-    GraphSolver: GraphSolver, name: str
+    GraphSolver: Type[GraphSolver], name: str
 ) -> Type[DatasetSolver]:
     """
     A solver that uses a GraphSolver to solve each graph in a dataset.
@@ -88,6 +91,7 @@ def DatasetSolverFromGraphSolver(
             :param dataset: The dataset to solve.
             :return: A list of MaximumIndependentSet solutions for each graph in the dataset.
             """
-            return [GraphSolver.solve_graph(graph) for graph in dataset]
+            graph_solver = GraphSolver()
+            return [graph_solver.solve_graph(graph) for graph in dataset]
 
     return DatasetSolverImpl
