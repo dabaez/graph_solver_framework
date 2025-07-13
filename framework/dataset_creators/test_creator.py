@@ -10,7 +10,6 @@ from framework.core.registries import register_dataset_creator
 
 @register_dataset_creator("test_creator")
 class TestDatasetCreator:
-    @property
     def required_parameters(self) -> list[RequiredParameter]:
         return []
 

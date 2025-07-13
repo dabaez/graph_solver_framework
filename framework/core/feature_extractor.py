@@ -12,6 +12,6 @@ class DatasetFeatureExtractor(Protocol):
         Extract features from the dataset.
 
         :param dataset: The dataset from which to extract features.
-        :return: A list of lists of features extracted from the dataset.
+        :return: A list of lists of features extracted from the dataset. Element [i][j] corresponds to the j-th feature of the i-th graph.
         """
         ...

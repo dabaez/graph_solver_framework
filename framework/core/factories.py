@@ -1,13 +1,15 @@
+import time
 from typing import Protocol, Type, runtime_checkable
 
 from networkx import Graph
 
 from framework.core.feature_extractor import DatasetFeatureExtractor
-from framework.core.graph import Dataset, Feature, FrameworkGraph, MaximumIndependentSet
+from framework.core.graph import Dataset, Feature, FrameworkGraph
 from framework.core.registries import (
     register_dataset_feature_extractor,
     register_dataset_solver,
 )
+from framework.core.solution import Solution
 from framework.core.solver import DatasetSolver
 
 ##### DATASET #####
@@ -65,12 +67,12 @@ def DatasetFeatureExtractorFromGraphFeatureExtractor(
 class GraphSolver(Protocol):
     """Base class for graph solvers."""
 
-    def solve_graph(self, graph: FrameworkGraph) -> MaximumIndependentSet:
+    def solve_graph(self, graph: FrameworkGraph) -> list[str]:
         """
         Solve the problem using the given graph.
 
         :param graph: The graph to solve.
-        :return: A MaximumIndependentSet solution for the graph.
+        :return: A list of nodes in the maximum independent set of the graph.
         """
         ...
 
@@ -84,7 +86,7 @@ def DatasetSolverFromGraphSolver(
 
     @register_dataset_solver(name)
     class DatasetSolverImpl:
-        def solve(self, dataset: Dataset) -> list[MaximumIndependentSet]:
+        def solve(self, dataset: Dataset) -> list[Solution]:
             """
             Solve the problem using the given dataset.
 
@@ -92,6 +94,17 @@ def DatasetSolverFromGraphSolver(
             :return: A list of MaximumIndependentSet solutions for each graph in the dataset.
             """
             graph_solver = GraphSolver()
-            return [graph_solver.solve_graph(graph) for graph in dataset]
+            solutions = []
+            for graph in dataset:
+                start_time = time.time()
+                response = graph_solver.solve_graph(graph)
+                end_time = time.time()
+                solutions.append(
+                    Solution(
+                        MaximumIndependentSet=response,
+                        time=end_time - start_time,
+                    )
+                )
+            return solutions
 
     return DatasetSolverImpl

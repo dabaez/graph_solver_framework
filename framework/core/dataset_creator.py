@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from framework.core.graph import Dataset
 
@@ -14,14 +14,13 @@ class RequiredParameter:
 class DatasetCreator(Protocol):
     """Base class for dataset creators."""
 
-    @property
     def required_parameters(self) -> list[RequiredParameter]:
         """
         List of required parameters for the creator.
         """
         ...
 
-    def validate_parameters(self, parameters: dict[str, Any]) -> bool:
+    def validate_parameters(self, parameters: dict[str, str]) -> bool:
         """
         Validate the provided parameters against the required parameters.
 
@@ -30,7 +29,7 @@ class DatasetCreator(Protocol):
         """
         ...
 
-    def create_dataset(self, parameters: dict[str, Any]) -> Dataset:
+    def create_dataset(self, parameters: dict[str, str]) -> Dataset:
         """
         Create a dataset based on the provided parameters.
 

@@ -3,8 +3,6 @@ from typing import Any, NewType
 
 from networkx import Graph
 
-MaximumIndependentSet = NewType("MaximumIndependentSet", list[str])
-
 
 @dataclass
 class Feature:
@@ -20,6 +18,13 @@ class FrameworkGraph:
         self.graph_object = graph_object
         if features is not None:
             self.features = features
+
+    def add_feature(self, feature: Feature):
+        for i, existing_feature in enumerate(self.features):
+            if existing_feature.name == feature.name:
+                self.features[i] = feature
+                return
+        self.features.append(feature)
 
 
 Dataset = NewType("Dataset", list[FrameworkGraph])
