@@ -7,6 +7,9 @@ from framework.core.registries import register_dataset_creator
 
 @register_dataset_creator("test_creator")
 class TestDatasetCreator:
+    def description(self) -> str:
+        return "A test dataset creator that generates a simple graph."
+
     def required_parameters(self) -> list[RequiredParameter]:
         return []
 

@@ -7,6 +7,9 @@ from framework.core.registries import register_dataset_creator
 
 @register_dataset_creator("BarabasiAlbertGenerator")
 class BarabasiAlbertGenerator:
+    def description(self) -> str:
+        return "Generates Barabasi-Albert graphs with specified parameters."
+
     def required_parameters(self) -> list[RequiredParameter]:
         return [
             RequiredParameter(

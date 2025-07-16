@@ -14,6 +14,12 @@ class RequiredParameter:
 class DatasetCreator(Protocol):
     """Base class for dataset creators."""
 
+    def description(self) -> str:
+        """
+        Description of the dataset creator.
+        """
+        ...
+
     def required_parameters(self) -> list[RequiredParameter]:
         """
         List of required parameters for the creator.

@@ -110,6 +110,7 @@ def explore_dataset_creator(dataset_creator_name: str):
         return
     print(f"Dataset Creator: {dataset_creator_name}")
     creator_instance = creator_class()
+    print(f"Description: {creator_instance.description()}")
     required_params = creator_instance.required_parameters()
     if required_params:
         print("Required parameters:")
