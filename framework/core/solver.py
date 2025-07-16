@@ -1,8 +1,15 @@
+from dataclasses import dataclass
 from typing import NewType, Protocol, runtime_checkable
 
 from framework.core.graph import FrameworkGraph
 
 MaximumIndependentSet = NewType("MaximumIndependentSet", list[str])
+
+
+@dataclass
+class Solution:
+    mis: MaximumIndependentSet
+    time: float
 
 
 @runtime_checkable
@@ -17,7 +24,7 @@ class Solver(Protocol):
         """
         ...
 
-    def solve(self, graph: FrameworkGraph) -> MaximumIndependentSet:
+    def solve(self, graph: FrameworkGraph) -> Solution:
         """
         Solve the problem using the given dataset.
 

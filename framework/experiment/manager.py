@@ -22,7 +22,6 @@ from .utils import (
     save_dataset,
     save_dataset_with_name,
     save_solver_solution,
-    solve,
 )
 
 
@@ -224,8 +223,8 @@ def explore_solver(solver_name: str):
     except Exception as e:
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
-    solution = [solve(solver_instance, graph) for graph in dataset]
-    solution_file = save_solver_solution(solver_name, solution, dataset_name)
+    solutions = [solver_instance.solve(graph) for graph in dataset]
+    solution_file = save_solver_solution(solver_name, solutions, dataset_name)
     print(f"Solutions saved to '{solution_file}'.")
 
 

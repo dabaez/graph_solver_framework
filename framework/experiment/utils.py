@@ -1,18 +1,16 @@
 import csv
 import os
 import pickle
-import time
 
-from framework.core.graph import Dataset, FrameworkGraph
+from framework.core.graph import Dataset
 from framework.core.registries import (
     DATASET_CREATORS,
     FEATURE_EXTRACTORS,
     SOLVERS,
 )
-from framework.core.solver import Solver
 
+from ..core.solver import Solution
 from .config import DATASETS_FOLDER, SOLUTIONS_FOLDER
-from .entities import Solution
 
 ##### REGISTRIES #####
 
@@ -85,20 +83,6 @@ def CalculatedFeaturesPercentageFromDataset(dataset: Dataset) -> dict[str, float
 
 
 ##### SOLVERS #####
-
-
-def solve(solver: Solver, graph: FrameworkGraph) -> Solution:
-    """
-    Solve the problem using the given solver and graph.
-
-    :param solver: The solver to use.
-    :param graph: The graph to solve.
-    :return: A solution containing the maximum independent set and time taken.
-    """
-    start_time = time.time()
-    mis = solver.solve(graph)
-    end_time = time.time()
-    return Solution(mis=mis, time=end_time - start_time)
 
 
 def save_solver_solution(

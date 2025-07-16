@@ -45,8 +45,8 @@ class BarabasiAlbertGenerator:
         max_n = int(parameters["max n"])
         min_m = int(parameters["min m"])
         max_m = int(parameters["max m"])
-        step_n = int(parameters.get("step n", 1))
-        step_m = int(parameters.get("step m", 1))
+        step_n = int(parameters["step n"]) if parameters.get("step n") else 1
+        step_m = int(parameters["step m"]) if parameters.get("step m") else 1
         return min_n, max_n, min_m, max_m, step_n, step_m
 
     def validate_parameters(self, parameters: dict[str, str]) -> bool:
