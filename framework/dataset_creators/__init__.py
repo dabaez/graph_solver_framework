@@ -1,1 +1,2 @@
+from .BarabasiAlbertGenerator import BarabasiAlbertGenerator
 from .test_creator import TestDatasetCreator
