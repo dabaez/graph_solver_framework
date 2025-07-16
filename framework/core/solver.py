@@ -1,18 +1,27 @@
-from typing import Protocol, runtime_checkable
+from typing import NewType, Protocol, runtime_checkable
 
-from framework.core.graph import Dataset
-from framework.core.solution import Solution
+from framework.core.graph import FrameworkGraph
+
+MaximumIndependentSet = NewType("MaximumIndependentSet", list[str])
 
 
 @runtime_checkable
-class DatasetSolver(Protocol):
+class Solver(Protocol):
     """Base class for solvers."""
 
-    def solve(self, dataset: Dataset) -> list[Solution]:
+    def description(self) -> str:
+        """
+        Description of the solver.
+
+        :return: A string describing the solver.
+        """
+        ...
+
+    def solve(self, graph: FrameworkGraph) -> MaximumIndependentSet:
         """
         Solve the problem using the given dataset.
 
-        :param dataset: The dataset to solve.
-        :return: A list of solutions for the dataset.
+        :param graph: The graph to solve.
+        :return: A maximum independent set of the graph.
         """
         ...

@@ -1,1 +1,1 @@
-from .test_solver import TestDatasetSolver
+from .test_solver import TestGraphSolver

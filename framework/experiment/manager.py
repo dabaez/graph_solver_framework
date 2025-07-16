@@ -5,12 +5,13 @@ import framework.feature_extractors  # noqa: F401
 import framework.solvers  # noqa: F401
 from framework.core.registries import (
     DATASET_CREATORS,
-    DATASET_FEATURE_EXTRACTORS,
-    DATASET_SOLVERS,
+    FEATURE_EXTRACTORS,
+    SOLVERS,
 )
 
 from .config import DATA_FOLDER, DATASETS_FOLDER, SOLUTIONS_FOLDER
 from .utils import (
+    CalculatedFeaturesFromDataset,
     CalculatedFeaturesPercentageFromDataset,
     create_folder_if_not_exists,
     list_datasets,
@@ -21,6 +22,7 @@ from .utils import (
     save_dataset,
     save_dataset_with_name,
     save_solver_solution,
+    solve,
 )
 
 
@@ -75,8 +77,8 @@ def explore_dataset(dataset_name: str):
                 graph = dataset[graph_index]
                 print(f"Graph {graph_index + 1}:")
                 if graph.features:
-                    for feature in graph.features:
-                        print(f"Feature: {feature.name}, Value: {feature.value}")
+                    for feature, feature_value in graph.features.items():
+                        print(f"Feature: {feature}, Value: {feature_value}")
                 else:
                     print("No features found for this graph.")
                 graph_representation = questionary.confirm(
@@ -155,11 +157,16 @@ def explore_feature_extractors():
 
 
 def explore_feature_extractor(extractor_name: str):
-    extractor_class = DATASET_FEATURE_EXTRACTORS.get(extractor_name)
+    extractor_class = FEATURE_EXTRACTORS.get(extractor_name)
     if not extractor_class:
         print(f"Feature extractor '{extractor_name}' not found.")
         return
     print(f"Feature Extractor: {extractor_name}")
+    extractor_instance = extractor_class()
+    print(f"Description: {extractor_instance.description()}")
+    feature_names = extractor_instance.feature_names()
+    if feature_names:
+        print("Features to be extracted: " + ", ".join(feature_names))
     dataset_name = questionary.select(
         "Choose a dataset to extract features from:",
         choices=list_datasets() + ["Go back"],
@@ -171,11 +178,16 @@ def explore_feature_extractor(extractor_name: str):
     except Exception as e:
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
-    extractor_instance = extractor_class()
-    features = extractor_instance.extract_features(dataset)
-    for i, features in enumerate(features):
-        for feature in features:
-            dataset[i].add_feature(feature)
+    present_features = CalculatedFeaturesFromDataset(dataset)
+    overwrite__features = True
+    if any(feature in feature_names for feature in present_features):
+        overwrite__features = questionary.confirm(
+            "Some features are already present in the dataset. Do you want to overwrite them? 'Y' for overwrite, 'N' to skip those features."
+        ).ask()
+    for graph in dataset:
+        calculated_features = extractor_instance.extract_features(graph)
+        for feature in calculated_features:
+            graph.add_feature(feature, overwrite=overwrite__features)
     save_dataset_with_name(dataset, dataset_name)
     print(f"Features extracted and added to the dataset '{dataset_name}'.")
 
@@ -194,11 +206,13 @@ def explore_solvers():
 
 
 def explore_solver(solver_name: str):
-    solver_class = DATASET_SOLVERS.get(solver_name)
+    solver_class = SOLVERS.get(solver_name)
     if not solver_class:
         print(f"Solver '{solver_name}' not found.")
         return
     print(f"Solver: {solver_name}")
+    solver_instance = solver_class()
+    print(f"Description: {solver_instance.description()}")
     dataset_name = questionary.select(
         "Choose a dataset to solve:", choices=list_datasets() + ["Go back"]
     ).ask()
@@ -209,8 +223,7 @@ def explore_solver(solver_name: str):
     except Exception as e:
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
-    solver_instance = solver_class()
-    solution = solver_instance.solve(dataset)
+    solution = [solve(solver_instance, graph) for graph in dataset]
     solution_file = save_solver_solution(solver_name, solution, dataset_name)
     print(f"Solutions saved to '{solution_file}'.")
 

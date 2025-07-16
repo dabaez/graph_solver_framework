@@ -1,17 +1,33 @@
 from typing import Protocol, runtime_checkable
 
-from framework.core.graph import Dataset, Feature
+from framework.core.graph import Feature, FrameworkGraph
 
 
 @runtime_checkable
-class DatasetFeatureExtractor(Protocol):
-    """Base class for dataset feature extractors."""
+class FeatureExtractor(Protocol):
+    """Base class for feature extractors."""
 
-    def extract_features(self, dataset: Dataset) -> list[list[Feature]]:
+    def description(self) -> str:
         """
-        Extract features from the dataset.
+        Description of the feature extractor.
 
-        :param dataset: The dataset from which to extract features.
-        :return: A list of lists of features extracted from the dataset. Element [i][j] corresponds to the j-th feature of the i-th graph.
+        :return: A string describing the feature extractor.
+        """
+        ...
+
+    def feature_names(self) -> list[str]:
+        """
+        Get the names of the features extracted by this extractor.
+
+        :return: A list of feature names.
+        """
+        ...
+
+    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+        """
+        Extract features from the given graph.
+
+        :param graph: The graph from which to extract features.
+        :return: A list of features extracted from the graph.
         """
         ...

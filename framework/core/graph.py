@@ -12,19 +12,14 @@ class Feature:
 
 class FrameworkGraph:
     graph_object: Graph
-    features: list[Feature] = []
+    features: dict[str, Any] = {}
 
-    def __init__(self, graph_object: Graph, features: list[Feature] | None = None):
+    def __init__(self, graph_object: Graph):
         self.graph_object = graph_object
-        if features is not None:
-            self.features = features
 
-    def add_feature(self, feature: Feature):
-        for i, existing_feature in enumerate(self.features):
-            if existing_feature.name == feature.name:
-                self.features[i] = feature
-                return
-        self.features.append(feature)
+    def add_feature(self, feature: Feature, overwrite: bool) -> None:
+        if overwrite or (feature.name not in self.features):
+            self.features[feature.name] = feature.value
 
 
 Dataset = NewType("Dataset", list[FrameworkGraph])

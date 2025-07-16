@@ -1,16 +1,18 @@
 import csv
 import os
 import pickle
+import time
 
-from framework.core.graph import Dataset
+from framework.core.graph import Dataset, FrameworkGraph
 from framework.core.registries import (
     DATASET_CREATORS,
-    DATASET_FEATURE_EXTRACTORS,
-    DATASET_SOLVERS,
+    FEATURE_EXTRACTORS,
+    SOLVERS,
 )
-from framework.core.solution import Solution
+from framework.core.solver import Solver
 
 from .config import DATASETS_FOLDER, SOLUTIONS_FOLDER
+from .entities import Solution
 
 ##### REGISTRIES #####
 
@@ -22,12 +24,12 @@ def list_registered_dataset_creators():
 
 def list_registered_dataset_solvers():
     """List all registered dataset solvers."""
-    return list(DATASET_SOLVERS.keys())
+    return list(SOLVERS.keys())
 
 
 def list_registered_dataset_feature_extractors():
     """List all registered dataset feature extractors."""
-    return list(DATASET_FEATURE_EXTRACTORS.keys())
+    return list(FEATURE_EXTRACTORS.keys())
 
 
 ##### DATASET #####
@@ -69,9 +71,9 @@ def CalculatedFeaturesFromDataset(dataset: Dataset) -> dict[str, int]:
     feature_counts = {}
     for graph in dataset:
         for feature in graph.features:
-            if feature.name not in feature_counts:
-                feature_counts[feature.name] = 0
-            feature_counts[feature.name] += 1
+            if feature not in feature_counts:
+                feature_counts[feature] = 0
+            feature_counts[feature] += 1
     return feature_counts
 
 
@@ -83,6 +85,20 @@ def CalculatedFeaturesPercentageFromDataset(dataset: Dataset) -> dict[str, float
 
 
 ##### SOLVERS #####
+
+
+def solve(solver: Solver, graph: FrameworkGraph) -> Solution:
+    """
+    Solve the problem using the given solver and graph.
+
+    :param solver: The solver to use.
+    :param graph: The graph to solve.
+    :return: A solution containing the maximum independent set and time taken.
+    """
+    start_time = time.time()
+    mis = solver.solve(graph)
+    end_time = time.time()
+    return Solution(mis=mis, time=end_time - start_time)
 
 
 def save_solver_solution(
@@ -97,9 +113,9 @@ def save_solver_solution(
             writer.writerow(
                 [
                     i + 1,
-                    len(sol.MaximumIndependentSet),
+                    len(sol.mis),
                     sol.time,
-                    ", ".join(sol.MaximumIndependentSet),
+                    ", ".join(sol.mis),
                 ]
             )
     return file_path

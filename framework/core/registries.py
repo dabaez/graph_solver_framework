@@ -1,12 +1,12 @@
 from typing import Callable, Type
 
 from framework.core.dataset_creator import DatasetCreator
-from framework.core.feature_extractor import DatasetFeatureExtractor
-from framework.core.solver import DatasetSolver
+from framework.core.feature_extractor import FeatureExtractor
+from framework.core.solver import Solver
 
 DATASET_CREATORS: dict[str, Type[DatasetCreator]] = {}
-DATASET_SOLVERS: dict[str, Type[DatasetSolver]] = {}
-DATASET_FEATURE_EXTRACTORS: dict[str, Type[DatasetFeatureExtractor]] = {}
+SOLVERS: dict[str, Type[Solver]] = {}
+FEATURE_EXTRACTORS: dict[str, Type[FeatureExtractor]] = {}
 
 
 def register_dataset_creator(
@@ -30,45 +30,43 @@ def register_dataset_creator(
     return decorator
 
 
-def register_dataset_solver(
+def register_solver(
     name: str,
-) -> Callable[[Type[DatasetSolver]], Type[DatasetSolver]]:
+) -> Callable[[Type[Solver]], Type[Solver]]:
     """
-    Decorator to register a dataset solver.
+    Decorator to register a solver.
 
-    :param name: The name of the dataset solver.
-    :return: A decorator that registers the dataset solver.
+    :param name: The name of the solver.
+    :return: A decorator that registers the solver.
     """
 
-    def decorator(solver: Type[DatasetSolver]) -> Type[DatasetSolver]:
-        if name in DATASET_SOLVERS:
-            raise ValueError(
-                f"Dataset solver with name '{name}' is already registered."
-            )
-        DATASET_SOLVERS[name] = solver
+    def decorator(solver: Type[Solver]) -> Type[Solver]:
+        if name in SOLVERS:
+            raise ValueError(f"Solver with name '{name}' is already registered.")
+        SOLVERS[name] = solver
         return solver
 
     return decorator
 
 
-def register_dataset_feature_extractor(
+def register_feature_extractor(
     name: str,
-) -> Callable[[Type[DatasetFeatureExtractor]], Type[DatasetFeatureExtractor]]:
+) -> Callable[[Type[FeatureExtractor]], Type[FeatureExtractor]]:
     """
     Decorator to register a dataset feature extractor.
 
-    :param name: The name of the dataset feature extractor.
-    :return: A decorator that registers the dataset feature extractor.
+    :param name: The name of the feature extractor.
+    :return: A decorator that registers the feature extractor.
     """
 
     def decorator(
-        extractor: Type[DatasetFeatureExtractor],
-    ) -> Type[DatasetFeatureExtractor]:
-        if name in DATASET_FEATURE_EXTRACTORS:
+        extractor: Type[FeatureExtractor],
+    ) -> Type[FeatureExtractor]:
+        if name in FEATURE_EXTRACTORS:
             raise ValueError(
-                f"Dataset feature extractor with name '{name}' is already registered."
+                f"Feature extractor with name '{name}' is already registered."
             )
-        DATASET_FEATURE_EXTRACTORS[name] = extractor
+        FEATURE_EXTRACTORS[name] = extractor
         return extractor
 
     return decorator
