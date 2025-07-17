@@ -5,8 +5,6 @@ from framework.core.graph import FrameworkGraph
 from framework.core.registries import register_solver
 from framework.core.solver import MaximumIndependentSet, Solution, Solver
 
-##### SOLVER #####
-
 
 class NoTimeSolver(Protocol):
     """Base class for solvers that do not return time."""

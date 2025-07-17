@@ -1,1 +1,1 @@
-from .test_extractor import TestGraphFeatureExtractor
+from .TestExtractor import TestGraphFeatureExtractor

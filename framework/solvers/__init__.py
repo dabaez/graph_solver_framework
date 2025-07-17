@@ -1,1 +1,2 @@
-from .test_solver import TestGraphSolverImplementation
+from .cpp_greedy.GreedyCPPSolver import GreedyCPPSolver
+from .TestSolver import TestGraphSolverImplementation
