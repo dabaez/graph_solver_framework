@@ -1,8 +1,8 @@
 import random
 
-from framework.core.factories import solver_from_no_time_solver
 from framework.core.graph import FrameworkGraph
 from framework.core.solver import MaximumIndependentSet
+from framework.solvers.NoTimeSolverWrapper import solver_from_no_time_solver
 
 
 class TestGraphSolver:
