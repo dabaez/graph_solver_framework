@@ -1,15 +1,28 @@
 import random
 import time
+from pathlib import Path
 
+import networkx
 import torch
 import torch_geometric.transforms as T
 from logzero import logger
+from torch import device
+from torch_geometric.utils import from_networkx
 
 from .model import HindsightLoss
 from .utils import _load_model
 
 
-def train(self_loop, cuda_devices, model_prob_maps, input, output, lr, epochs):
+def train(
+    self_loop: bool,
+    cuda_devices: list[device],
+    model_prob_maps: int,
+    input: networkx.Graph,
+    output: Path,
+    lr: float,
+    epochs: int,
+    pretrained_weights: Path | None,
+):
     cuda = bool(cuda_devices)
     prob_maps = model_prob_maps
 
@@ -22,7 +35,7 @@ def train(self_loop, cuda_devices, model_prob_maps, input, output, lr, epochs):
 
     training_graphs = []
 
-    graphs = torch.load(input / "graphs.pt")
+    graphs = from_networkx(input)
     random.shuffle(graphs)
 
     for graph in graphs:
@@ -40,7 +53,9 @@ def train(self_loop, cuda_devices, model_prob_maps, input, output, lr, epochs):
 
     logger.info(f"Number of training graphs: {len(training_graphs)}")
 
-    model = _load_model(prob_maps, cuda_dev=cuda_dev)
+    model = _load_model(
+        prob_maps=prob_maps, weight_file=pretrained_weights, cuda_dev=cuda_dev
+    )
     loss_fcn = HindsightLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr, weight_decay=5e-4)
     num_epochs = epochs

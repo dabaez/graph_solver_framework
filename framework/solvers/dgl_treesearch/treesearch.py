@@ -3,11 +3,16 @@ import gc
 import pickle
 import sys
 import time
+from multiprocessing.sharedctypes import Synchronized
+from multiprocessing.synchronize import Lock as LockType
+from pathlib import Path
 
 import numpy as np
 import torch
 import torch_geometric.transforms as T
 from reducelib.reducelib import reducelib
+from torch import device
+from torch_geometric.data import Data
 
 from .utils import _load_model, _locked_log
 
@@ -15,25 +20,25 @@ from .utils import _load_model, _locked_log
 class _TreeSearch:
     def __init__(
         self,
-        pid,
-        num_threads,
-        queue,
-        lock,
-        weight_file,
-        pickle_path,
-        g,
-        time_budget,
-        solution_budget,
-        self_loop,
-        max_prob_maps,
-        model_prob_maps,
-        cuda_devs,
-        reduction,
-        local_search,
-        queue_pruning,
-        noise_as_prob_maps,
-        weighted_queue_pop,
-        optimum_found,
+        pid: int,
+        num_threads: int,
+        queue: list | None,
+        lock: LockType,
+        weight_file: Path | None,
+        pickle_path: Path | None,
+        g: Data,
+        time_budget: float,
+        solution_budget: int | None,
+        self_loop: bool,
+        max_prob_maps: int,
+        model_prob_maps: int,
+        cuda_devs: list[device],
+        reduction: bool,
+        local_search: bool,
+        queue_pruning: bool,
+        noise_as_prob_maps: bool,
+        weighted_queue_pop: bool,
+        optimum_found: bool | Synchronized[bool],
     ):
         self.queue = queue
         self.num_threads = num_threads
@@ -202,6 +207,7 @@ class _TreeSearch:
             else:
                 solutions_to_append.append((result, num_unlabeled))
 
+        self.queue = self.queue or []
         self.queue.extend(map(lambda x: x[0], solutions_to_append))
         self.queue_unlabeled_counts.extend(map(lambda x: x[1], solutions_to_append))
 
@@ -277,7 +283,7 @@ class _TreeSearch:
             )
             return True
 
-        if len(self.queue) == 0:
+        if len(self.queue or []) == 0:
             _locked_log(
                 self.lock, f"{self.pid}: Process is exiting, due to empty queue", "INFO"
             )
@@ -294,6 +300,8 @@ class _TreeSearch:
         return False
 
     def pop_incomplete_solution(self):
+        if self.queue is None:
+            raise ValueError("Cannot pop from empty queue")
         if self.weighted_queue_pop:
             nu = np.array(self.queue_unlabeled_counts)
             unnormalized_pop_p = 1 / nu
@@ -441,13 +449,15 @@ class _TreeSearch:
         if time.monotonic() - self.last_status_report > 15:
             _locked_log(
                 self.lock,
-                f"{self.pid}: Cuda Device={self.cuda_dev} (out of {self.cuda_devs}). Currently {self.min_unlabeled}/{len(list(result.nodes()))} vertices are unlabeled in the best solution, and {self.max_unlabeled}/{len(list(result.nodes()))} are unlabeled in the worst solution. We have {len(self.queue)} solutions in the queue. The queue is {sys.getsizeof(self.queue)} big. Time spent: {time.monotonic() - self.start_time}. Max Prob Maps = {self.max_prob_maps}. Total solutions done = {self.total_solutions}",
+                f"{self.pid}: Cuda Device={self.cuda_dev} (out of {self.cuda_devs}). Currently {self.min_unlabeled}/{len(list(result.nodes()))} vertices are unlabeled in the best solution, and {self.max_unlabeled}/{len(list(result.nodes()))} are unlabeled in the worst solution. We have {len(self.queue or [])} solutions in the queue. The queue is {sys.getsizeof(self.queue)} big. Time spent: {time.monotonic() - self.start_time}. Max Prob Maps = {self.max_prob_maps}. Total solutions done = {self.total_solutions}",
                 "INFO",
             )
             self.last_status_report = time.monotonic()
             gc.collect()
 
     def prune_queue(self):
+        if self.queue is None:
+            raise ValueError("Cannot prune empty queue")
         while len(self.queue) > self.max_queue_length:
             g = self.queue.pop(0)
             del g
@@ -476,7 +486,8 @@ class _TreeSearch:
             _locked_log(
                 self.lock, f"{self.pid}: Pickle saved! Cleaning up memory.", "DEBUG"
             )
-            del self.queue[:]
+            if self.queue is not None:
+                del self.queue[:]
             del self.queue
             if self.rdlib:
                 del self.rdlib

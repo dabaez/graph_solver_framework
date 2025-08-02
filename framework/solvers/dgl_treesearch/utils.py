@@ -1,13 +1,18 @@
 import importlib
+from multiprocessing.synchronize import Lock as LockType
+from pathlib import Path
 
 import torch
 import torch.nn.functional as F
 from logzero import logger
+from torch import device
 
 from .model import GCN
 
 
-def _load_model(prob_maps, weight_file=None, cuda_dev=None):
+def _load_model(
+    prob_maps: int, weight_file: Path | None = None, cuda_dev: device | None = None
+):
     model = GCN(1, 32, prob_maps, 20, F.relu, 0)
     if cuda_dev is not None:
         model = model.to(cuda_dev)
@@ -23,7 +28,7 @@ def _load_model(prob_maps, weight_file=None, cuda_dev=None):
     return model
 
 
-def _locked_log(lock, msg, loglevel):
+def _locked_log(lock: LockType, msg: str, loglevel: str):
     if lock:
         if loglevel == "DEBUG":
             with lock:
@@ -57,7 +62,7 @@ def _locked_log(lock, msg, loglevel):
             )
 
 
-def find_module(full_module_name):
+def find_module(full_module_name: str):
     """
     Returns module object if module `full_module_name` can be imported.
 

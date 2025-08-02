@@ -1,10 +1,21 @@
+from typing import Callable
+
 import torch
 import torch.nn as nn
+from torch import Tensor
 from torch_geometric.nn import GCNConv
 
 
 class GCN(nn.Module):
-    def __init__(self, in_feats, n_hidden, n_classes, n_layers, activation, dropout):
+    def __init__(
+        self,
+        in_feats: int,
+        n_hidden: int,
+        n_classes: int,
+        n_layers: int,
+        activation: Callable[[Tensor], Tensor],
+        dropout: float,
+    ):
         super(GCN, self).__init__()
         self.layers = nn.ModuleList()
 
@@ -17,7 +28,7 @@ class GCN(nn.Module):
 
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, g, features):
+    def forward(self, g: Tensor, features):
         h = features
         for i, layer in enumerate(self.layers):
             if i != 0:
