@@ -82,6 +82,36 @@ def CalculatedFeaturesPercentageFromDataset(dataset: Dataset) -> dict[str, float
     return {name: count / total_graphs * 100 for name, count in feature_counts.items()}
 
 
+def dataset_exists(dataset_name: str) -> bool:
+    """Check if a dataset exists in the datasets folder."""
+    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.pkl")
+    return os.path.exists(file_path)
+
+
+def merge_datasets(dataset_names: list[str], new_dataset_name: str) -> Dataset:
+    """Merge multiple datasets into a new dataset."""
+    merged_dataset = Dataset([])
+    for name in dataset_names:
+        dataset = load_dataset(name)
+        merged_dataset.extend(dataset)
+
+    save_dataset_with_name(merged_dataset, new_dataset_name)
+    return merged_dataset
+
+
+def delete_dataset(dataset_name: str) -> None:
+    """Delete a dataset from the datasets folder."""
+    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.pkl")
+    os.remove(file_path)
+
+
+def rename_dataset(old_name: str, new_name: str) -> None:
+    """Rename a dataset in the datasets folder."""
+    old_path = os.path.join(DATASETS_FOLDER, f"{old_name}.pkl")
+    new_path = os.path.join(DATASETS_FOLDER, f"{new_name}.pkl")
+    os.rename(old_path, new_path)
+
+
 ##### SOLVERS #####
 
 

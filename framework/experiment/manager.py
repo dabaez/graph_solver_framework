@@ -14,11 +14,15 @@ from .utils import (
     CalculatedFeaturesFromDataset,
     CalculatedFeaturesPercentageFromDataset,
     create_folder_if_not_exists,
+    dataset_exists,
+    delete_dataset,
     list_datasets,
     list_registered_dataset_creators,
     list_registered_dataset_feature_extractors,
     list_registered_dataset_solvers,
     load_dataset,
+    merge_datasets,
+    rename_dataset,
     save_dataset,
     save_dataset_with_name,
     save_solver_solution,
@@ -36,12 +40,60 @@ def explore_datasets():
     if not available_datasets:
         print("No datasets available.")
         return
-    chosen_dataset = questionary.select(
-        "Choose a dataset to explore:", choices=[*available_datasets, "Go back"]
+    chosen_option = questionary.select(
+        "Choose an option:",
+        choices=[
+            "Explore a specific dataset",
+            "Merge datasets",
+            "Delete datasets",
+            "Go back",
+        ],
     ).ask()
-    if chosen_dataset == "Go back":
-        return
-    explore_dataset(chosen_dataset)
+    if chosen_option == "Explore a specific dataset":
+        chosen_dataset = questionary.select(
+            "Choose a dataset to explore:", choices=[*available_datasets, "Go back"]
+        ).ask()
+        if chosen_dataset == "Go back":
+            return
+        explore_dataset(chosen_dataset)
+    elif chosen_option == "Merge datasets":
+        datatsets_to_merge = questionary.checkbox(
+            "Select datasets to merge:", choices=available_datasets + ["Go back"]
+        ).ask()
+        if "Go back" in datatsets_to_merge:
+            return
+        if len(datatsets_to_merge) < 2:
+            print("Can't merge less than two datasets.")
+            return
+        while True:
+            new_dataset_name = questionary.text(
+                "Enter a name for the new merged dataset (or leave empty to go back):"
+            ).ask()
+            if not new_dataset_name:
+                return
+            if dataset_exists(new_dataset_name):
+                print(
+                    f"Dataset '{new_dataset_name}' already exists. Please choose a different name."
+                )
+            else:
+                break
+        merge_datasets(datatsets_to_merge, new_dataset_name)
+        print(f"Merged datasets into '{new_dataset_name}'.")
+    elif chosen_option == "Delete datasets":
+        datasets_to_delete = questionary.checkbox(
+            "Select datasets to delete:", choices=available_datasets + ["Go back"]
+        ).ask()
+        if "Go back" in datasets_to_delete:
+            return
+        if not datasets_to_delete:
+            print("No datasets selected for deletion.")
+            return
+        if questionary.confirm(
+            f"You are about to delete {len(datasets_to_delete)} datasets. Are you sure?"
+        ).ask():
+            for dataset in datasets_to_delete:
+                delete_dataset(dataset)
+            print(f"Deleted datasets: {', '.join(datasets_to_delete)}")
 
 
 def explore_dataset(dataset_name: str):
@@ -61,32 +113,64 @@ def explore_dataset(dataset_name: str):
             )
     else:
         print("No calculated features found in this dataset.")
-    explore_graphs = questionary.confirm(
-        "Do you want to explore the graphs in this dataset?", default=False
+    chosen_option = questionary.select(
+        "Choose an option:",
+        choices=[
+            "Explore graphs in this dataset",
+            "Rename this dataset",
+            "Delete this dataset",
+            "Go back",
+        ],
     ).ask()
-    if explore_graphs:
-        while True:
-            graph_index = questionary.text(
-                f"Choose a graph index from 1 to {len(dataset)} (or leave empty to go back):"
-            ).ask()
-            if not graph_index:
-                break
-            try:
-                graph_index = int(graph_index) - 1
-                graph = dataset[graph_index]
-                print(f"Graph {graph_index + 1}:")
-                if graph.features:
-                    for feature, feature_value in graph.features.items():
-                        print(f"Feature: {feature}, Value: {feature_value}")
-                else:
-                    print("No features found for this graph.")
-                graph_representation = questionary.confirm(
-                    "Do you want to see the graph representation?", default=False
+    if chosen_option == "Explore graphs in this dataset":
+        explore_graphs = questionary.confirm(
+            "Do you want to explore the graphs in this dataset?", default=False
+        ).ask()
+        if explore_graphs:
+            while True:
+                graph_index = questionary.text(
+                    f"Choose a graph index from 1 to {len(dataset)} (or leave empty to go back):"
                 ).ask()
-                if graph_representation:
-                    print(graph.graph_object.edges())
-            except (ValueError, IndexError):
-                print("Invalid graph index. Please try again.")
+                if not graph_index:
+                    break
+                try:
+                    graph_index = int(graph_index) - 1
+                    graph = dataset[graph_index]
+                    print(f"Graph {graph_index + 1}:")
+                    if graph.features:
+                        for feature, feature_value in graph.features.items():
+                            print(f"Feature: {feature}, Value: {feature_value}")
+                    else:
+                        print("No features found for this graph.")
+                    graph_representation = questionary.confirm(
+                        "Do you want to see the graph representation?", default=False
+                    ).ask()
+                    if graph_representation:
+                        print(graph.graph_object.edges())
+                except (ValueError, IndexError):
+                    print("Invalid graph index. Please try again.")
+    elif chosen_option == "Rename this dataset":
+        while True:
+            new_name = questionary.text(
+                "Enter a new name for the dataset (or leave empty to go back):"
+            ).ask()
+            if not new_name:
+                return
+            if dataset_exists(new_name):
+                print(
+                    f"Dataset '{new_name}' already exists. Please choose a different name."
+                )
+            else:
+                break
+        rename_dataset(dataset_name, new_name)
+        print(f"Dataset renamed to '{new_name}'.")
+        explore_dataset(new_name)
+    elif chosen_option == "Delete this dataset":
+        if questionary.confirm(
+            f"Are you sure you want to delete the dataset '{dataset_name}'?"
+        ).ask():
+            delete_dataset(dataset_name)
+            print(f"Dataset '{dataset_name}' deleted.")
 
 
 def explore_dataset_creators():
