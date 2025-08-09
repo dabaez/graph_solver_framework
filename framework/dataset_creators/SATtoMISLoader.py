@@ -19,6 +19,7 @@ class SATtoMISLoader:
             RequiredParameter(
                 name="folder path",
                 description="Path to the folder containing the SAT instance files. The instances should be in DIMACS cnf format.",
+                isPath=True,
             ),
         ]
 

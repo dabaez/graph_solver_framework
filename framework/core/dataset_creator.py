@@ -8,6 +8,7 @@ from framework.core.graph import Dataset
 class RequiredParameter:
     name: str
     description: str
+    isPath: bool = False
 
 
 @runtime_checkable

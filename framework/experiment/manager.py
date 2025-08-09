@@ -206,9 +206,14 @@ def explore_dataset_creator(dataset_creator_name: str):
         parameters = {param.name: "" for param in required_params}
         while True:
             for param in required_params:
-                value = questionary.text(
-                    f"{param.name}:", default=parameters[param.name]
-                ).ask()
+                if param.isPath:
+                    value = questionary.path(
+                        f"{param.name} (path):", default=parameters[param.name]
+                    ).ask()
+                else:
+                    value = questionary.text(
+                        f"{param.name}:", default=parameters[param.name]
+                    ).ask()
                 parameters[param.name] = value
 
             if creator_instance.validate_parameters(parameters):
