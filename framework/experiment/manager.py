@@ -123,32 +123,28 @@ def explore_dataset(dataset_name: str):
         ],
     ).ask()
     if chosen_option == "Explore graphs in this dataset":
-        explore_graphs = questionary.confirm(
-            "Do you want to explore the graphs in this dataset?", default=False
-        ).ask()
-        if explore_graphs:
-            while True:
-                graph_index = questionary.text(
-                    f"Choose a graph index from 1 to {len(dataset)} (or leave empty to go back):"
+        while True:
+            graph_index = questionary.text(
+                f"Choose a graph index from 1 to {len(dataset)} (or leave empty to go back):"
+            ).ask()
+            if not graph_index:
+                break
+            try:
+                graph_index = int(graph_index) - 1
+                graph = dataset[graph_index]
+                print(f"Graph {graph_index + 1}:")
+                if graph.features:
+                    for feature, feature_value in graph.features.items():
+                        print(f"Feature: {feature}, Value: {feature_value}")
+                else:
+                    print("No features found for this graph.")
+                graph_representation = questionary.confirm(
+                    "Do you want to see the graph representation?", default=False
                 ).ask()
-                if not graph_index:
-                    break
-                try:
-                    graph_index = int(graph_index) - 1
-                    graph = dataset[graph_index]
-                    print(f"Graph {graph_index + 1}:")
-                    if graph.features:
-                        for feature, feature_value in graph.features.items():
-                            print(f"Feature: {feature}, Value: {feature_value}")
-                    else:
-                        print("No features found for this graph.")
-                    graph_representation = questionary.confirm(
-                        "Do you want to see the graph representation?", default=False
-                    ).ask()
-                    if graph_representation:
-                        print(graph.graph_object.edges())
-                except (ValueError, IndexError):
-                    print("Invalid graph index. Please try again.")
+                if graph_representation:
+                    print(graph.graph_object.edges())
+            except (ValueError, IndexError):
+                print("Invalid graph index. Please try again.")
     elif chosen_option == "Rename this dataset":
         while True:
             new_name = questionary.text(
