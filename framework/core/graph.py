@@ -12,10 +12,11 @@ class Feature:
 
 class FrameworkGraph:
     graph_object: Graph
-    features: dict[str, Any] = {}
+    features: dict[str, Any]
 
     def __init__(self, graph_object: Graph):
         self.graph_object = graph_object
+        self.features = {}
 
     def add_feature(self, feature: Feature, overwrite: bool) -> None:
         if overwrite or (feature.name not in self.features):
