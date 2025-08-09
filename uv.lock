@@ -250,6 +250,7 @@ dependencies = [
     { name = "logzero" },
     { name = "networkx" },
     { name = "pybind11", extra = ["global"] },
+    { name = "python-sat" },
     { name = "questionary" },
     { name = "torch" },
     { name = "torch-geometric" },
@@ -261,6 +262,7 @@ requires-dist = [
     { name = "logzero", specifier = ">=1.7.0" },
     { name = "networkx", specifier = ">=3.5" },
     { name = "pybind11", extras = ["global"], specifier = ">=3.0.0" },
+    { name = "python-sat", specifier = ">=1.8.dev19" },
     { name = "questionary", specifier = ">=2.1.0" },
     { name = "torch", specifier = ">=2.7.1" },
     { name = "torch-geometric", specifier = ">=2.6.1" },
@@ -731,6 +733,25 @@ wheels = [
 ]
 
 [[package]]
+name = "python-sat"
+version = "1.8.dev19"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "six" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/72/56/81fcad52cc1cf47399500cb0062a00094897df1bb8847cf989aaf73afc76/python_sat-1.8.dev19.tar.gz", hash = "sha256:b272f915cec08b89e3a477038492598bc9d34f1c22b1f33acc6cbd2aaf8538b3", size = 5693271, upload-time = "2025-08-07T11:25:24.167Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/06/37816355091747fec6a28f65866b8a411d3e327ec85d53ac66cbd2fce1dd/python_sat-1.8.dev19-cp312-cp312-macosx_15_0_arm64.whl", hash = "sha256:ea4d809d725ed6f93e808ce57caff62f7c38eeab2a1e44c5e666f6d9fe42d35b", size = 1660245, upload-time = "2025-08-07T11:25:03.189Z" },
+    { url = "https://files.pythonhosted.org/packages/c0/2a/6c206d55be0dd1a30e5122dc2d7cdc8248c110d9a4c122e72e6cc71df4f4/python_sat-1.8.dev19-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:4ddc90c073657a105af866e0979b943c5560f2007e4db35fc4e670aec0d103a7", size = 2822259, upload-time = "2025-08-08T00:28:40.087Z" },
+    { url = "https://files.pythonhosted.org/packages/e8/dc/d8a1abbfaa4c739cbdcd5d5fe03a1cc892f2993b362a2aea03d79e4ffd83/python_sat-1.8.dev19-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:35eab3b4238f13072f7d936ebcf66285529b1c93ee2eebc1157a42c6c156fe9b", size = 2772599, upload-time = "2025-08-08T00:28:44.243Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/a7/fd90c2174ac74036e2c7eef1b0cb861d5b87a7a0933ed7bffc37ac58755f/python_sat-1.8.dev19-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:de989602492de59469685add222c179072b06d8b669d45faa249b7e4c8741eab", size = 2772592, upload-time = "2025-08-08T00:28:46.467Z" },
+    { url = "https://files.pythonhosted.org/packages/9b/eb/3e5730568a1e2b649272ae50f83894596169a480816ce2aab7343d5034b3/python_sat-1.8.dev19-cp312-cp312-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:ce7c54b568a835abd1e800598c4c036c6cf8b5d5bb998bd4637d66da9aa9dd9c", size = 2640655, upload-time = "2025-08-08T00:28:48.655Z" },
+    { url = "https://files.pythonhosted.org/packages/73/0f/9f9d64ef447c6a2a69bcf3c5af95e9ff6a21210fe8e62e5da0152a70f0bd/python_sat-1.8.dev19-cp312-cp312-win_amd64.whl", hash = "sha256:725ad153d45b841c441d11dd9251ec14d4f62fed6ee0f706899bace101555098", size = 1319747, upload-time = "2025-08-07T11:25:06.817Z" },
+    { url = "https://files.pythonhosted.org/packages/7a/85/304405ca29bc78312333d109453b54892692bd4ffbed739d3ee2c8758f7b/python_sat-1.8.dev19-cp313-cp313-macosx_15_0_arm64.whl", hash = "sha256:af026d99155169eb078f76af192980be5962efeb45ce669505d74de7e744fe37", size = 1660213, upload-time = "2025-08-07T11:25:08.553Z" },
+    { url = "https://files.pythonhosted.org/packages/02/14/49a094919640418ae2779398d5ae69ff4ab866aef751b95a69b023a961cd/python_sat-1.8.dev19-cp313-cp313-win_amd64.whl", hash = "sha256:4438b4fa66b5c68965b4c0656582cd2d7a14f68db412eecbc6e05a11e0683a40", size = 1319762, upload-time = "2025-08-07T11:25:10.222Z" },
+]
+
+[[package]]
 name = "questionary"
 version = "2.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -764,6 +785,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/18/5d/3bf57dcd21979b887f014ea83c24ae194cfcd12b9e0fda66b957c69d1fca/setuptools-80.9.0.tar.gz", hash = "sha256:f36b47402ecde768dbfafc46e8e4207b4360c654f1f3bb84475f0a28628fb19c", size = 1319958, upload-time = "2025-05-27T00:56:51.443Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl", hash = "sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922", size = 1201486, upload-time = "2025-05-27T00:56:49.664Z" },
+]
+
+[[package]]
+name = "six"
+version = "1.17.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
 
 [[package]]
