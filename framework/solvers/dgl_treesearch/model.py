@@ -17,24 +17,26 @@ class GCN(nn.Module):
         dropout: float,
     ):
         super(GCN, self).__init__()
-        self.layers = nn.ModuleList()
+        self.convs = nn.ModuleList()
+        self.activation = activation
 
-        self.layers.append(GCNConv(in_feats, n_hidden, activation=activation))
+        self.convs.append(GCNConv(in_feats, n_hidden))
 
         for _ in range(n_layers - 1):
-            self.layers.append(GCNConv(n_hidden, n_hidden, activation=activation))
+            self.convs.append(GCNConv(n_hidden, n_hidden))
 
-        self.layers.append(GCNConv(n_hidden, n_classes, activation=torch.sigmoid))
+        self.convs.append(GCNConv(n_hidden, n_classes))
 
         self.dropout = nn.Dropout(p=dropout)
 
-    def forward(self, g: Tensor, features):
-        h = features
-        for i, layer in enumerate(self.layers):
-            if i != 0:
-                h = self.dropout(h)
-            h = layer(g, h)
-        return h
+    def forward(self, x: Tensor, edge_index: Tensor) -> Tensor:
+        h = x
+        for conv in self.convs[:-1]:
+            h = conv(h, edge_index)
+            h = self.activation(h)
+            h = self.dropout(h)
+        h = self.convs[-1](h, edge_index)
+        return torch.sigmoid(h)
 
 
 class HindsightLoss(nn.Module):
