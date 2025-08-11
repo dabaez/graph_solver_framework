@@ -27,27 +27,20 @@ def convert_dataset_to_pyg(dataset: Dataset) -> list[Data]:
         G = graph.graph_object.copy()
         pyg_data = from_networkx(G)
 
-        if "weights" not in graph.features or "labels" not in graph.features:
-            raise ValueError("Graph must contain 'weights' and 'labels' features.")
+        if "labels" not in graph.features:
+            raise ValueError("Graph must contain 'labels' feature.")
 
-        node_features = graph.features["weights"]
         node_labels = graph.features["labels"]
 
-        if not isinstance(node_features, np.ndarray) or not isinstance(
-            node_labels, np.ndarray
-        ):
-            raise TypeError("Expected 'weights' and 'labels' to be NumPy arrays.")
+        if not isinstance(node_labels, np.ndarray):
+            raise TypeError("Expected 'labels' to be a NumPy array.")
 
-        features_tensor = torch.from_numpy(node_features).float().unsqueeze(1)
         labels_tensor = torch.from_numpy(node_labels).long()
 
-        if (
-            pyg_data.num_nodes != features_tensor.shape[0]
-            or pyg_data.num_nodes != labels_tensor.shape[0]
-        ):
+        if pyg_data.num_nodes != labels_tensor.shape[0]:
             raise ValueError("Inconsistent number of nodes and features/labels.")
 
-        pyg_data.x = features_tensor
+        pyg_data.x = torch.ones((pyg_data.num_nodes, 1), dtype=torch.float)
         pyg_data.y = labels_tensor
 
         pyg_dataset.append(pyg_data)

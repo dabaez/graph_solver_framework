@@ -1,2 +1,2 @@
-from .MachineLearningFeatures import GreedyLabels, RandomWeights
+from .MachineLearningFeatures import GreedyLabels
 from .TestExtractor import TestGraphFeatureExtractor
