@@ -11,8 +11,8 @@ import numpy as np
 import torch
 import torch_geometric.transforms as T
 from reducelib.reducelib import reducelib
-from torch import device
 from torch_geometric.data import Data
+from torch_geometric.utils import subgraph
 
 from .utils import _load_model, _locked_log
 
@@ -32,7 +32,7 @@ class _TreeSearch:
         self_loop: bool,
         max_prob_maps: int,
         model_prob_maps: int,
-        cuda_devs: list[device],
+        cuda_devs: list[int],
         reduction: bool,
         local_search: bool,
         queue_pruning: bool,
@@ -60,8 +60,13 @@ class _TreeSearch:
         self.local_search = local_search
 
         self.cuda = bool(cuda_devs)  # use cuda if devices are supplied
-        self.cuda_dev = cuda_devs[pid % len(cuda_devs)] if self.cuda else None
         self.cuda_devs = cuda_devs
+
+        if self.cuda and torch.cuda.is_available():
+            device_id = cuda_devs[pid % len(cuda_devs)]
+            self.cuda_dev = torch.device(f"cuda:{device_id}")
+        else:
+            self.cuda_dev = torch.device("cpu")
 
         self.pid = pid
         self.total_solutions = 0
@@ -75,7 +80,8 @@ class _TreeSearch:
         self.min_unlabeled = 99999999999
         self.max_unlabeled = 0
 
-        self.weighted = torch.any(self.g.ndata["weight"] != 1)
+        assert self.g.x is not None, "Graph needs to have x (features)"
+        self.weighted = torch.any(self.g.x[:, 0] != 1)
         self.rdlib = reducelib() if reduction or local_search else None
 
         if isinstance(optimum_found, bool):
@@ -83,22 +89,21 @@ class _TreeSearch:
         else:
             self.optimum_found = optimum_found  # Multiprocessing
 
-        self.update_fn1 = lambda nodes: {
-            "ts_label": torch.ones_like(nodes.data["ts_label"])
-        }
-        self.update_fn2 = lambda nodes: {
-            "ts_label": torch.zeros_like(nodes.data["ts_label"])
-        }
+        assert self.g.num_nodes is not None, "Graph needs to have num_nodes"
+
+        self.num_nodes = self.g.num_nodes
+
+        self.g.ts_label = torch.full(
+            (self.num_nodes, 1), -1, dtype=torch.int8, device=self.cuda_dev
+        )
 
         if self.queue_pruning:
-            self.max_queue_length = int(
-                min(self.g.num_nodes() * 10, 16384) / num_threads
-            )
+            self.max_queue_length = int(min(self.num_nodes * 10, 16384) / num_threads)
 
-        self.labels_given = "label" in self.g.ndata.keys()
-        if self.labels_given:
-            _lbls = self.g.ndata["label"].detach()
-            self.optimal_mwis = torch.sum(self.g.ndata["weight"][_lbls == 1]).item()
+        self.labels_given = isinstance(self.g.y, torch.Tensor)
+
+        if isinstance(self.g.y, torch.Tensor):
+            self.optimal_mwis = torch.sum(self.g.y).item()
             _locked_log(
                 self.lock,
                 f"{self.pid}: Labeled graph given. optimal_mwis={self.optimal_mwis}",
@@ -231,16 +236,11 @@ class _TreeSearch:
             if self.g is None:
                 raise ValueError("Cannot start with empty queue and no start graph")
 
-            self.g = self.g.cpu().formats("coo")
+            self.g = self.g.cpu()
 
             # initialize attribute
-            self.g.ndata["ts_label"] = torch.tensor(
-                np.full((self.g.num_nodes(), 1), -1), dtype=torch.int8
-            )
-            self.g.ndata["id_map"] = torch.tensor(
-                np.arange(self.g.num_nodes()).reshape((self.g.num_nodes(), 1)),
-                dtype=torch.int32,
-            )
+            self.g.ts_label = torch.full((self.num_nodes, 1), -1, dtype=torch.int8)
+            self.g.id_map = torch.arange(self.num_nodes, dtype=torch.int32).view(-1, 1)
 
             # we fix self loops before pushing in the queue, so we don't need to do it for every residual
             if self.self_loop:
@@ -254,18 +254,25 @@ class _TreeSearch:
 
         # Precompute unlabeled vertex counts
         for result in self.queue:
-            tslabels = result.ndata["ts_label"].detach().squeeze(1)
+            tslabels = result.ts_label.detach().squeeze(1)
             self.queue_unlabeled_counts.append(torch.sum(tslabels == -1).item())
 
     def generate_neighborhood_map(self):
         ### create neighborhood map ###
         _locked_log(self.lock, f"{self.pid}: Generating neighborhood map", "DEBUG")
+        assert self.g.edge_index is not None, "Graph needs to have edge_index"
 
-        for v in self.g.nodes():
-            _v = v.item()
-            self.neighbor_map[_v] = torch.cat(
-                (self.g.predecessors(_v), self.g.successors(_v))
-            ).tolist()
+        for _v in range(self.num_nodes):
+            self.neighbor_map[_v] = (
+                torch.cat(
+                    [
+                        self.g.edge_index[1][self.g.edge_index[0] == _v],
+                        self.g.edge_index[0][self.g.edge_index[1] == _v],
+                    ]
+                )
+                .unique()
+                .tolist()
+            )
 
         _locked_log(self.lock, f"{self.pid}: Map generated", "DEBUG")
 
@@ -300,8 +307,7 @@ class _TreeSearch:
         return False
 
     def pop_incomplete_solution(self):
-        if self.queue is None:
-            raise ValueError("Cannot pop from empty queue")
+        assert self.queue is not None, "Queue must not be None"
         if self.weighted_queue_pop:
             nu = np.array(self.queue_unlabeled_counts)
             unnormalized_pop_p = 1 / nu
@@ -318,7 +324,22 @@ class _TreeSearch:
         return incomplete_solution
 
     def create_residual(self, incomplete_solution):
-        residual = copy.deepcopy(incomplete_solution).formats("coo")
+        residual = copy.deepcopy(incomplete_solution)
+        nodes_to_keep_mask = residual.ts_label.squeeze(1) == -1
+        nodes_to_keep_ids = torch.nonzero(nodes_to_keep_mask).squeeze(1)
+        if nodes_to_keep_ids.numel() == 0:
+            return None
+        old_to_new_node_map = torch.full((residual.num_nodes,), -1, dtype=torch.long)
+        old_to_new_node_map[nodes_to_keep_ids] = torch.arange(
+            len(nodes_to_keep_ids), dtype=torch.long
+        )
+        new_edge_index, new_edge_attr = subgraph(
+            nodes_to_keep_ids,
+            residual.edge_index,
+            edge_attr=residual.edge_attr if hasattr(residual, "edge_attr") else None,
+            num_nodes=residual.num_nodes,
+        )
+
         to_remove = residual.filter_nodes(
             lambda nodes: (nodes.data["ts_label"] != -1).squeeze(1)
         )
@@ -456,8 +477,7 @@ class _TreeSearch:
             gc.collect()
 
     def prune_queue(self):
-        if self.queue is None:
-            raise ValueError("Cannot prune empty queue")
+        assert self.queue is not None, "Queue must not be None"
         while len(self.queue) > self.max_queue_length:
             g = self.queue.pop(0)
             del g
