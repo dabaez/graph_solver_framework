@@ -10,10 +10,10 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch_geometric.transforms as T
-from reducelib.reducelib import reducelib
 from torch_geometric.data import Data
 from torch_geometric.utils import subgraph
 
+from .reducelib.reducelib import reducelib
 from .utils import _load_model, _locked_log
 
 
@@ -38,7 +38,7 @@ class _TreeSearch:
         queue_pruning: bool,
         noise_as_prob_maps: bool,
         weighted_queue_pop: bool,
-        optimum_found: bool | Synchronized[bool],
+        optimum_found: bool | Synchronized,
     ):
         self.queue = queue
         self.num_threads = num_threads
@@ -110,7 +110,7 @@ class _TreeSearch:
                 "DEBUG",
             )
 
-    def run(self):
+    def run(self) -> tuple | None:
         with torch.no_grad():
             self.start_time = time.monotonic()
             self.start_process_time = time.process_time()
@@ -125,13 +125,17 @@ class _TreeSearch:
 
         return self.wrap_up()
 
-    def search_step(self):
+    def search_step(self) -> bool:
         if self.should_break():
             return True
 
         incomplete_solution = self.pop_incomplete_solution()
         residual = self.create_residual(incomplete_solution)
         self.total_solutions += 1
+
+        if residual is None:
+            self.update_best_solution(incomplete_solution)
+            return False
 
         if self.reduction:
             residual, should_return = self.do_reduction(incomplete_solution, residual)
@@ -141,7 +145,7 @@ class _TreeSearch:
                 return False
 
         if not self.noise_as_prob_maps and self.cuda:
-            residual = residual.to(self.cuda_dev)
+            residual = residual.to(str(self.cuda_dev))
 
         out = self.infer_prob_maps(residual)
         residual = residual.cpu()
@@ -156,13 +160,15 @@ class _TreeSearch:
 
         return False
 
-    def explore_solutions(self, incomplete_solution, residual, prob_maps):
+    def explore_solutions(
+        self, incomplete_solution: Data, residual: Data, prob_maps: torch.Tensor
+    ) -> None:
         num_prob_maps = min(prob_maps.shape[1], self.max_prob_maps)
         solutions_to_append = []
         # explore all solutions
         for pmap in range(num_prob_maps):
             # copy incomplete solution, in order to represent final result
-            result = copy.deepcopy(incomplete_solution).formats("coo")
+            result = copy.deepcopy(incomplete_solution)
 
             _out = (
                 prob_maps[:, pmap].cpu().detach().numpy()
@@ -171,35 +177,30 @@ class _TreeSearch:
             _sorted = np.flip(np.argsort(_out))
             progress = False
 
-            marked_zero = []
-            marked_one = []
+            marked_zero = set()
+            marked_one = set()
 
             for v in _sorted:
-                _v = residual.ndata[
-                    "id_map"
-                ][
-                    v
-                ][
-                    0
-                ].item()  # _v is the _name_ of the vth node of the residual graph, such that we can find the according node in the original graph
+                _v = residual.original_node_ids[v].item()
                 if (
                     _v in marked_zero
                     or _v in marked_one
-                    or result.ndata["ts_label"][_v][0].item() > -1
+                    or result.ts_label[_v][0].item() > -1
                 ):
-                    assert (
-                        progress
-                    )  # if progress is False, something is wrong with the residual...
+                    if not progress:
+                        pass
                     break
                 else:
                     progress = True
-                    marked_one.append(_v)
-                    marked_zero += self.neighbor_map[_v]
+                    marked_one.add(_v)
+                    marked_zero.update(self.neighbor_map[_v])
 
-            result.apply_nodes(self.update_fn2, v=marked_zero)
-            result.apply_nodes(self.update_fn1, v=marked_one)
+            if marked_zero:
+                result.ts_label[torch.tensor(list(marked_zero), dtype=torch.long)] = 0
+            if marked_one:
+                result.ts_label[torch.tensor(list(marked_one), dtype=torch.long)] = 1
 
-            tslabels = result.ndata["ts_label"].detach().squeeze(1)
+            tslabels = result.ts_label.detach().squeeze(1)
             num_unlabeled = torch.sum(tslabels == -1).item()
 
             self.min_unlabeled = min(num_unlabeled, self.min_unlabeled)
@@ -216,13 +217,13 @@ class _TreeSearch:
         self.queue.extend(map(lambda x: x[0], solutions_to_append))
         self.queue_unlabeled_counts.extend(map(lambda x: x[1], solutions_to_append))
 
-    def load_model(self):
+    def load_model(self) -> None:
         self.model = _load_model(
             self.model_prob_maps, weight_file=self.weight_file, cuda_dev=self.cuda_dev
         )
         self.model.eval()
 
-    def prepare_queue(self):
+    def prepare_queue(self) -> None:
         ### Prepare Queue ###
         if self.queue is not None:
             _locked_log(
@@ -257,7 +258,7 @@ class _TreeSearch:
             tslabels = result.ts_label.detach().squeeze(1)
             self.queue_unlabeled_counts.append(torch.sum(tslabels == -1).item())
 
-    def generate_neighborhood_map(self):
+    def generate_neighborhood_map(self) -> None:
         ### create neighborhood map ###
         _locked_log(self.lock, f"{self.pid}: Generating neighborhood map", "DEBUG")
         assert self.g.edge_index is not None, "Graph needs to have edge_index"
@@ -306,7 +307,7 @@ class _TreeSearch:
 
         return False
 
-    def pop_incomplete_solution(self):
+    def pop_incomplete_solution(self) -> Data:
         assert self.queue is not None, "Queue must not be None"
         if self.weighted_queue_pop:
             nu = np.array(self.queue_unlabeled_counts)
@@ -323,31 +324,48 @@ class _TreeSearch:
 
         return incomplete_solution
 
-    def create_residual(self, incomplete_solution):
-        residual = copy.deepcopy(incomplete_solution)
-        nodes_to_keep_mask = residual.ts_label.squeeze(1) == -1
+    def create_residual(self, incomplete_solution: Data) -> Data | None:
+        assert incomplete_solution.num_nodes is not None, (
+            "Graph must have num_nodes defined"
+        )
+        assert incomplete_solution.edge_index is not None, (
+            "Graph must have edge_index defined"
+        )
+        assert incomplete_solution.x is not None, "Graph must have x defined"
+
+        nodes_to_keep_mask = incomplete_solution.ts_label.squeeze(1) == -1
         nodes_to_keep_ids = torch.nonzero(nodes_to_keep_mask).squeeze(1)
+
         if nodes_to_keep_ids.numel() == 0:
             return None
-        old_to_new_node_map = torch.full((residual.num_nodes,), -1, dtype=torch.long)
-        old_to_new_node_map[nodes_to_keep_ids] = torch.arange(
-            len(nodes_to_keep_ids), dtype=torch.long
-        )
+
         new_edge_index, new_edge_attr = subgraph(
-            nodes_to_keep_ids,
-            residual.edge_index,
-            edge_attr=residual.edge_attr if hasattr(residual, "edge_attr") else None,
-            num_nodes=residual.num_nodes,
+            subset=nodes_to_keep_ids,
+            edge_index=incomplete_solution.edge_index,
+            edge_attr=getattr(incomplete_solution, "edge_attr", None),
+            relabel_nodes=True,
+            num_nodes=incomplete_solution.num_nodes,
         )
 
-        to_remove = residual.filter_nodes(
-            lambda nodes: (nodes.data["ts_label"] != -1).squeeze(1)
+        new_x = incomplete_solution.x[nodes_to_keep_ids]
+        new_ts_label = incomplete_solution.ts_label[nodes_to_keep_ids]
+        new_id_map = incomplete_solution.id_map[nodes_to_keep_ids]
+
+        residual = Data(
+            x=new_x, edge_index=new_edge_index, ts_label=new_ts_label, id_map=new_id_map
         )
-        residual.remove_nodes(to_remove)
+
+        if new_edge_attr is not None:
+            residual.edge_attr = new_edge_attr
+
+        residual.original_node_ids = nodes_to_keep_ids
+        residual.num_nodes = nodes_to_keep_ids.numel()
 
         return residual
 
-    def do_reduction(self, incomplete_solution, residual):
+    def do_reduction(
+        self, incomplete_solution: Data, residual: Data
+    ) -> tuple[Data | None, bool]:
         if self.rdlib is None:
             raise ValueError("Reduction is not enabled, but reduction step was called.")
         if self.weighted:
@@ -366,60 +384,66 @@ class _TreeSearch:
             or marked_one_residual_ids.shape[0] > 0
         ):
             # map residual vertex ids to original graph vertex ids
-            marked_zero = list(
-                map(
-                    lambda x: residual.ndata["id_map"][x][0].item(),
-                    marked_zero_residual_ids,
-                )
+            marked_zero_original_ids = residual.original_node_ids[
+                torch.from_numpy(marked_zero_residual_ids).long()
+            ].tolist()
+            marked_one_original_ids = residual.original_node_ids[
+                torch.from_numpy(marked_one_residual_ids).long()
+            ].tolist()
+
+            nodes_to_label_zero = set(marked_zero_original_ids)
+            nodes_to_label_one = set(marked_one_original_ids)
+
+            for v_one_original in nodes_to_label_one:
+                if v_one_original in self.neighbor_map:
+                    nodes_to_label_zero.update(self.neighbor_map[v_one_original])
+
+            nodes_to_label_zero_tensor = torch.tensor(
+                list(nodes_to_label_zero), dtype=torch.long
             )
-            marked_one = list(
-                map(
-                    lambda x: residual.ndata["id_map"][x][0].item(),
-                    marked_one_residual_ids,
-                )
+            nodes_to_label_one_tensor = torch.tensor(
+                list(nodes_to_label_one), dtype=torch.long
             )
 
-            for v in marked_one:
-                marked_zero.extend(self.neighbor_map[v])
+            # Label nodes that should be 0 (excluded)
+            if nodes_to_label_zero_tensor.numel() > 0:
+                incomplete_solution.ts_label[nodes_to_label_zero_tensor] = 0
 
-            marked_zero = np.array(marked_zero)
-            marked_one = np.array(marked_one)
-
-            # Update incomplete solution
-            incomplete_solution.apply_nodes(self.update_fn2, v=marked_zero)
-            incomplete_solution.apply_nodes(self.update_fn1, v=marked_one)
+            # Label nodes that should be 1 (included)
+            if nodes_to_label_one_tensor.numel() > 0:
+                incomplete_solution.ts_label[nodes_to_label_one_tensor] = 1
 
             # Check if reduction solved MIS
-            tslabels = incomplete_solution.ndata["ts_label"].detach().squeeze(1)
+            tslabels = incomplete_solution.ts_label.detach().squeeze(1)
             num_unlabeled = torch.sum(tslabels == -1).item()
 
             if num_unlabeled == 0:
                 self.update_best_solution(incomplete_solution)
                 return None, True
 
-            # recreate residual graph based on new information
-            residual = self.create_residual(incomplete_solution)
+            return self.create_residual(incomplete_solution), False
 
         return residual, False
 
-    def update_best_solution(self, labeled_graph):
+    def update_best_solution(self, labeled_graph: Data) -> None:
         if self.local_search and self.rdlib is not None:
             if self.weighted:
                 ls_result = self.rdlib.weighted_local_search(labeled_graph)
             else:
                 ls_result = self.rdlib.unweighted_local_search(labeled_graph)
 
-            labeled_graph.ndata["ts_label"] = torch.tensor(
+            labeled_graph.ts_label = torch.tensor(
                 ls_result, dtype=torch.int8
             ).unsqueeze(1)
 
-        tslabels = labeled_graph.ndata["ts_label"].detach().squeeze(1)
+        tslabels = labeled_graph.ts_label.detach().squeeze(1)
         num_mis = torch.sum(tslabels == 1).item()
 
         if num_mis > 0:
-            mis_vertices = labeled_graph.ndata["id_map"][(tslabels == 1)].to(torch.long)
+            mis_vertices = labeled_graph.id_map[(tslabels == 1)].to(torch.long)
+            assert labeled_graph.x is not None, "Graph must have x defined"
             mis_weight = torch.sum(
-                labeled_graph.ndata["weight"][mis_vertices].to(torch.float32)
+                labeled_graph.x[:, 0][mis_vertices].to(torch.float32)
             ).item()
 
             if (
@@ -456,34 +480,40 @@ class _TreeSearch:
                 "WARNING",
             )
 
-    def infer_prob_maps(self, residual):
-        features = residual.ndata["weight"]
+    def infer_prob_maps(self, residual: Data) -> torch.Tensor:
+        assert residual.x is not None, "Graph must have x defined"
+        assert residual.num_nodes is not None, "Graph must have num_nodes defined"
+
+        features = residual.x
         if not self.noise_as_prob_maps:
             # actual model inference
-            out = self.model(residual, features)
+            out = self.model(features, residual.edge_index)
         else:
             # Replace GNN output probability maps with random noise
-            out = torch.rand(features.shape[0], self.max_prob_maps)
+            out = torch.rand(
+                residual.num_nodes, self.max_prob_maps, device=residual.x.device
+            )
         return out
 
-    def maybe_print_status_report(self, result):
+    def maybe_print_status_report(self, result: Data) -> None:
         if time.monotonic() - self.last_status_report > 15:
+            num_nodes_in_graph = result.num_nodes
             _locked_log(
                 self.lock,
-                f"{self.pid}: Cuda Device={self.cuda_dev} (out of {self.cuda_devs}). Currently {self.min_unlabeled}/{len(list(result.nodes()))} vertices are unlabeled in the best solution, and {self.max_unlabeled}/{len(list(result.nodes()))} are unlabeled in the worst solution. We have {len(self.queue or [])} solutions in the queue. The queue is {sys.getsizeof(self.queue)} big. Time spent: {time.monotonic() - self.start_time}. Max Prob Maps = {self.max_prob_maps}. Total solutions done = {self.total_solutions}",
+                f"{self.pid}: Cuda Device={self.cuda_dev} (out of {self.cuda_devs}). Currently {self.min_unlabeled}/{num_nodes_in_graph} vertices are unlabeled in the best solution, and {self.max_unlabeled}/{num_nodes_in_graph} are unlabeled in the worst solution. We have {len(self.queue or [])} solutions in the queue. The queue is {sys.getsizeof(self.queue)} big. Time spent: {time.monotonic() - self.start_time}. Max Prob Maps = {self.max_prob_maps}. Total solutions done = {self.total_solutions}",
                 "INFO",
             )
             self.last_status_report = time.monotonic()
             gc.collect()
 
-    def prune_queue(self):
+    def prune_queue(self) -> None:
         assert self.queue is not None, "Queue must not be None"
         while len(self.queue) > self.max_queue_length:
             g = self.queue.pop(0)
             del g
             self.queue_unlabeled_counts.pop(0)
 
-    def wrap_up(self):
+    def wrap_up(self) -> tuple | None:
         _locked_log(self.lock, f"{self.pid}: Wrapping up", "INFO")
 
         if self.pickle_path:
@@ -511,6 +541,8 @@ class _TreeSearch:
             del self.queue
             if self.rdlib:
                 del self.rdlib
+
+            return
 
         if isinstance(self.optimum_found, bool):
             opt_found = self.optimum_found
@@ -580,16 +612,17 @@ def tree_search_wrapper(
     return ts.run()
 
 
-def check_for_inconsistency(g, neighbor_map):
-    for i in range(g.number_of_nodes()):
-        if g.ndata["ts_label"][i][0].item() == 1:
+def check_for_inconsistency(g: Data, neighbor_map: list[list[int]]) -> bool:
+    num_nodes = g.num_nodes
+    for i in range(num_nodes or 0):
+        if g.ts_label[i].item() == 1:
             for neighbor in neighbor_map[i]:
-                if i != neighbor and g.ndata["ts_label"][neighbor][0].item() == 1:
+                if i != neighbor and g.ts_label[neighbor].item() == 1:
                     return True
 
-        if g.ndata["ts_label"][i][0].item() == -1:
+        if g.ts_label[i].item() == -1:
             for neighbor in neighbor_map[i]:
-                if g.ndata["ts_label"][neighbor][0].item() == 1:
+                if g.ts_label[neighbor].item() == 1:
                     return True
 
     return False

@@ -12,6 +12,10 @@ import torch.multiprocessing as mp
 import torch_geometric.transforms as T
 from logzero import logger
 from torch.multiprocessing import Lock
+from torch_geometric.data import Data
+from torch_geometric.utils import from_networkx
+
+from framework.core.graph import Dataset
 
 from .treesearch import tree_search_wrapper
 
@@ -31,16 +35,7 @@ def _run_single_threaded_treesearch(
     weighted_queue_pop,
 ):
     start_time = time.time()
-    (
-        best_solution,
-        best_solution_vertices,
-        best_solution_weight,
-        total_solutions,
-        _,
-        best_solution_time,
-        best_solution_process_time,
-        _,
-    ) = tree_search_wrapper(
+    response = tree_search_wrapper(
         0,
         1,
         None,
@@ -58,6 +53,18 @@ def _run_single_threaded_treesearch(
         noise_as_prob_maps=noise_as_prob_maps,
         weighted_queue_pop=weighted_queue_pop,
     )
+    if not response:
+        raise ValueError("Empty response")
+    (
+        best_solution,
+        best_solution_vertices,
+        best_solution_weight,
+        total_solutions,
+        _,
+        best_solution_time,
+        best_solution_process_time,
+        _,
+    ) = response
     end_time = time.time()
     total_time = end_time - start_time
 
@@ -89,16 +96,7 @@ def _run_parallel_treesearch(
 ):
     ### Build start results for threads single threadedly ###
     start_time = time.time()
-    (
-        init_best_solution,
-        init_best_solution_vertices,
-        init_best_solution_weight,
-        init_total_solutions,
-        start_results,
-        best_solution_time,
-        best_solution_process_time,
-        opt_found,
-    ) = tree_search_wrapper(
+    response = tree_search_wrapper(
         0,
         1,
         None,
@@ -115,6 +113,18 @@ def _run_parallel_treesearch(
         queue_pruning=queue_pruning,
         noise_as_prob_maps=noise_as_prob_maps,
     )
+    if not response:
+        raise ValueError("Empty response")
+    (
+        init_best_solution,
+        init_best_solution_vertices,
+        init_best_solution_weight,
+        init_total_solutions,
+        start_results,
+        best_solution_time,
+        best_solution_process_time,
+        opt_found,
+    ) = response
     return_list = []
     # Initialization might already find results for simple graphs, so we need to respect that
     return_list.append(
@@ -264,6 +274,17 @@ def _run_parallel_treesearch(
     )
 
 
+def convert_dataset_to_pyg(dataset: Dataset) -> list[Data]:
+    pyg_dataset = []
+    for graph in dataset:
+        G = graph.graph_object.copy()
+        pyg_data = from_networkx(G)
+        pyg_data.x = torch.ones((pyg_data.num_nodes, 1), dtype=torch.float)
+        pyg_dataset.append(pyg_data)
+
+    return pyg_dataset
+
+
 def solve(
     self_loop,
     threadcount,
@@ -285,15 +306,17 @@ def solve(
 
     # initialize reduce lib
     if reduction or local_search:
-        from reducelib.reducelib import reducelib
+        from .reducelib.reducelib import reducelib
 
         rdlib = reducelib()  # calls cmake if necessary
         del rdlib
 
     weight_file = pretrained_weights
-    graphs = torch.load(input / "graphs.pt")
-    with open(str(input / "graph_names.json"), "r") as f:
-        graph_names = json.load(f)
+
+    graphs = convert_dataset_to_pyg(input)
+    graph_names = []
+    for i, g in enumerate(graphs):
+        graph_names.append(f"graph {i}")
 
     results = {}
     for idx, g in enumerate(graphs):

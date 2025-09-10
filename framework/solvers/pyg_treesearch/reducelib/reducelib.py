@@ -6,6 +6,8 @@ from typing import Tuple
 
 import numpy as np
 from logzero import logger
+from torch_geometric.data import Data
+from torch_geometric.transforms import RemoveSelfLoops
 
 
 class reducelib:
@@ -59,17 +61,25 @@ class reducelib:
             # Execute `make reduce` in build folder
             subprocess.run(["make", "-j8", "reducew"], check=True, cwd=build_path)
 
-    def __CtypeAdj(self, adj):
-        adj = adj.tocoo()
-        num_edge = adj.nnz
-        num_node = adj.shape[0]
-        e_list_from = (ctypes.c_int * num_edge)()
-        e_list_to = (ctypes.c_int * num_edge)()
-        edges = zip(adj.col, adj.row)
-        if num_edge:
-            a, b = zip(*edges)
-            e_list_from[:] = a
-            e_list_to[:] = b
+    def __CtypeAdj(self, g: Data):
+        assert g.num_nodes is not None, "Graph must have num_nodes defined"
+        assert g.edge_index is not None, "Graph must have edge_index defined"
+        num_node = g.num_nodes
+        if g.edge_index.numel() == 0:
+            num_edge = 0
+            e_list_from = (ctypes.c_int * 0)()
+            e_list_to = (ctypes.c_int * 0)()
+        else:
+            e_froms_tensor = g.edge_index[0].cpu().numpy()
+            e_tos_tensor = g.edge_index[1].cpu().numpy()
+            num_edge = e_froms_tensor.shape[0]
+
+            # Create C-type arrays
+            e_list_from = (ctypes.c_int * num_edge)()
+            e_list_to = (ctypes.c_int * num_edge)()
+
+            e_list_from[:] = e_froms_tensor.tolist()
+            e_list_to[:] = e_tos_tensor.tolist()
 
         return (
             num_node,
@@ -78,14 +88,12 @@ class reducelib:
             ctypes.cast(e_list_to, ctypes.c_void_p),
         )
 
-    def unweighted_reduce_graph(self, g) -> Tuple[int, np.ndarray]:
+    def unweighted_reduce_graph(self, g: Data) -> Tuple[int, np.ndarray]:
         # generate sparse input to pass to C++
-        _g = (
-            g.remove_self_loop()
+        _g = RemoveSelfLoops()(
+            g.clone()
         )  # create new graph without self loops, as KaMIS expects no self-loops
-        n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(
-            _g.adj(transpose=False, scipy_fmt="coo")
-        )  # we have undirected graphs hence transpose does not matter
+        n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(_g)
 
         # create output variables
         reduction_result = (ctypes.c_int * (n_nodes))()
@@ -100,20 +108,18 @@ class reducelib:
 
         return crt_is_size, reduction_result
 
-    def unweighted_local_search(self, g):
+    def unweighted_local_search(self, g: Data):
         # generate sparse input to pass to C++
-        _g = (
-            g.remove_self_loop()
+        _g = RemoveSelfLoops()(
+            g.clone()
         )  # create new graph without self loops, as KaMIS expects no self-loops
         n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(
-            _g.adj(transpose=False, scipy_fmt="coo")
+            _g
         )  # we have undirected graphs hence transpose does not matter
 
         init_mis = (ctypes.c_int * (n_nodes))()
         final_mis = (ctypes.c_int * (n_nodes))()
-        current_solution = (
-            _g.ndata["ts_label"].detach().squeeze(1).numpy().astype(np.int32)
-        )
+        current_solution = _g.ts_label.detach().squeeze(1).numpy().astype(np.int32)
         init_mis[:] = current_solution
         init_mis = ctypes.cast(init_mis, ctypes.c_void_p)
         self.unweighted_lib.UnweightedLocalSearch(
@@ -125,15 +131,13 @@ class reducelib:
 
     def weighted_reduce_graph(self, g):
         # generate sparse input to pass to C++
-        _g = (
-            g.remove_self_loop()
+        _g = RemoveSelfLoops()(
+            g.clone()
         )  # create new graph without self loops, as KaMIS expects no self-loops
-        n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(
-            _g.adj(transpose=False, scipy_fmt="coo")
-        )  # we have undirected graphs hence transpose does not matter
+        n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(_g)
 
         node_weights = (ctypes.c_int * (n_nodes))()
-        _weights = _g.ndata["weight"].detach().squeeze(1).numpy().astype(np.int32)
+        _weights = _g.x[:, 0].detach().squeeze().numpy().astype(np.int32)
         node_weights[:] = _weights
         node_weights = ctypes.cast(node_weights, ctypes.c_void_p)
 
@@ -152,23 +156,19 @@ class reducelib:
 
     def weighted_local_search(self, g):
         # generate sparse input to pass to C++
-        _g = (
-            g.remove_self_loop()
+        _g = RemoveSelfLoops()(
+            g.clone()
         )  # create new graph without self loops, as KaMIS expects no self-loops
-        n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(
-            _g.adj(transpose=False, scipy_fmt="coo")
-        )  # we have undirected graphs hence transpose does not matter
+        n_nodes, n_edges, e_froms, e_tos = self.__CtypeAdj(_g)
 
         node_weights = (ctypes.c_int * (n_nodes))()
-        _weights = _g.ndata["weight"].detach().squeeze(1).numpy().astype(np.int32)
+        _weights = _g.x[:, 0].detach().squeeze().numpy().astype(np.int32)
         node_weights[:] = _weights
         node_weights = ctypes.cast(node_weights, ctypes.c_void_p)
 
         init_mis = (ctypes.c_int * (n_nodes))()
         final_mis = (ctypes.c_int * (n_nodes))()
-        current_solution = (
-            _g.ndata["ts_label"].detach().squeeze(1).numpy().astype(np.int32)
-        )
+        current_solution = _g.ts_label.detach().squeeze(1).numpy().astype(np.int32)
         init_mis[:] = current_solution
         init_mis = ctypes.cast(init_mis, ctypes.c_void_p)
         self.weighted_lib.WeightedLocalSearch(
