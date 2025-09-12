@@ -1,5 +1,3 @@
-import gc
-import json
 import pickle
 import shutil
 import tempfile
@@ -15,7 +13,8 @@ from torch.multiprocessing import Lock
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 
-from framework.core.graph import Dataset
+from framework.core.graph import FrameworkGraph
+from framework.core.solver import MaximumIndependentSet, Solution
 
 from .treesearch import tree_search_wrapper
 
@@ -274,15 +273,11 @@ def _run_parallel_treesearch(
     )
 
 
-def convert_dataset_to_pyg(dataset: Dataset) -> list[Data]:
-    pyg_dataset = []
-    for graph in dataset:
-        G = graph.graph_object.copy()
-        pyg_data = from_networkx(G)
-        pyg_data.x = torch.ones((pyg_data.num_nodes, 1), dtype=torch.float)
-        pyg_dataset.append(pyg_data)
-
-    return pyg_dataset
+def convert_dataset_to_pyg(graph: FrameworkGraph) -> Data:
+    G = graph.graph_object.copy()
+    pyg_data = from_networkx(G)
+    pyg_data.x = torch.ones((pyg_data.num_nodes, 1), dtype=torch.float)
+    return pyg_data
 
 
 def solve(
@@ -298,9 +293,8 @@ def solve(
     noise_as_prob_maps,
     weighted_queue_pop,
     input,
-    output,
     pretrained_weights,
-):
+) -> Solution:
     if not pretrained_weights:
         raise ValueError("--pretrained_weights flag is required for solving! Exiting.")
 
@@ -313,101 +307,73 @@ def solve(
 
     weight_file = pretrained_weights
 
-    graphs = convert_dataset_to_pyg(input)
-    graph_names = []
-    for i, g in enumerate(graphs):
-        graph_names.append(f"graph {i}")
+    g = convert_dataset_to_pyg(input)
 
-    results = {}
-    for idx, g in enumerate(graphs):
-        logger.info(f"Solving graph {idx + 1}/{len(graphs)} ({graph_names[idx]})")
+    if self_loop:
+        transforms = T.Compose([T.RemoveSelfLoops(), T.AddSelfLoops()])
+        g = transforms(g)
+    else:
+        transforms = T.RemoveSelfLoops()
+        g = transforms(g)
 
-        if self_loop:
-            transforms = T.Compose([T.RemoveSelfLoops(), T.AddSelfLoops()])
-            g = transforms(g)
-        else:
-            transforms = T.RemoveSelfLoops()
-            g = transforms(g)
+    print("??")
 
-        if threadcount > 1:
-            (
-                best_solution,
-                best_solution_vertices,
-                best_solution_weight,
-                total_solutions,
-                total_time,
-                best_solution_time,
-                best_solution_process_time,
-            ) = _run_parallel_treesearch(
-                g,
-                threadcount,
-                time_budget,
-                self_loop,
-                max_prob_maps,
-                model_prob_maps,
-                cuda_devs,
-                weight_file,
-                reduction,
-                local_search,
-                queue_pruning,
-                noise_as_prob_maps,
-                weighted_queue_pop,
-            )
-        else:
-            (
-                best_solution,
-                best_solution_vertices,
-                best_solution_weight,
-                total_solutions,
-                total_time,
-                best_solution_time,
-                best_solution_process_time,
-            ) = _run_single_threaded_treesearch(
-                g,
-                time_budget,
-                self_loop,
-                max_prob_maps,
-                model_prob_maps,
-                cuda_devs,
-                weight_file,
-                reduction,
-                local_search,
-                queue_pruning,
-                noise_as_prob_maps,
-                weighted_queue_pop,
-            )
-
-        results[graph_names[idx]] = {
-            "total_solutions": int(total_solutions),
-            "total_time": total_time,
-        }
-
-        logger.info(
-            f"Iterated through {total_solutions} in {total_time} seconds ({float(total_solutions) / float(total_time):.2f} e/s) 🚀🚀"
+    if threadcount > 1:
+        (
+            best_solution,
+            best_solution_vertices,
+            best_solution_weight,
+            total_solutions,
+            total_time,
+            best_solution_time,
+            best_solution_process_time,
+        ) = _run_parallel_treesearch(
+            g,
+            threadcount,
+            time_budget,
+            self_loop,
+            max_prob_maps,
+            model_prob_maps,
+            cuda_devs,
+            weight_file,
+            reduction,
+            local_search,
+            queue_pruning,
+            noise_as_prob_maps,
+            weighted_queue_pop,
         )
-        if best_solution is not None:
-            logger.info(
-                f"Found MWIS: n={best_solution_vertices}, w={best_solution_weight} ✔️✔️"
-            )
-            results[graph_names[idx]]["mwis_found"] = True
-            results[graph_names[idx]]["mwis_vertices"] = int(
-                best_solution_vertices or 0
-            )
-            results[graph_names[idx]]["mwis_weight"] = float(best_solution_weight or 0)
-            results[graph_names[idx]]["time_to_find_mwis"] = best_solution_time
-            results[graph_names[idx]]["process_time_to_find_mwis"] = (
-                best_solution_process_time
-            )
-            results[graph_names[idx]]["mwis"] = np.ravel(best_solution).tolist()
-        else:
-            logger.info("Did not find any MWIS 😭😭")
-            results[graph_names[idx]]["mwis_found"] = False
+    else:
+        (
+            best_solution,
+            best_solution_vertices,
+            best_solution_weight,
+            total_solutions,
+            total_time,
+            best_solution_time,
+            best_solution_process_time,
+        ) = _run_single_threaded_treesearch(
+            g,
+            time_budget,
+            self_loop,
+            max_prob_maps,
+            model_prob_maps,
+            cuda_devs,
+            weight_file,
+            reduction,
+            local_search,
+            queue_pruning,
+            noise_as_prob_maps,
+            weighted_queue_pop,
+        )
 
-        with open(output / "results.json", "w", encoding="utf-8") as f:
-            json.dump(results, f, ensure_ascii=False, sort_keys=True, indent=4)
+    print("??")
 
-        logger.debug("Calling the garbage collector.")
-        del g
-        gc.collect()
+    if best_solution is not None:
+        best_solution = [str(v) for v in np.ravel(best_solution).tolist()]
 
-    logger.info("Done with all graphs, exiting.")
+    print("??")
+
+    return Solution(
+        mis=MaximumIndependentSet(best_solution if best_solution is not None else []),
+        time=total_time,
+    )
