@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from logzero import logger
 from torch import device
 
+from .config import logs
 from .model import GCN
 
 
@@ -29,37 +30,38 @@ def _load_model(
 
 
 def _locked_log(lock: LockType, msg: str, loglevel: str):
-    if lock:
-        if loglevel == "DEBUG":
-            with lock:
-                logger.debug(msg)
-        elif loglevel == "INFO":
-            with lock:
-                logger.info(msg)
-        elif loglevel == "WARN":
-            with lock:
-                logger.warning(msg)
-        elif loglevel == "ERROR":
-            with lock:
-                logger.error(msg)
+    if logs:
+        if lock:
+            if loglevel == "DEBUG":
+                with lock:
+                    logger.debug(msg)
+            elif loglevel == "INFO":
+                with lock:
+                    logger.info(msg)
+            elif loglevel == "WARN":
+                with lock:
+                    logger.warning(msg)
+            elif loglevel == "ERROR":
+                with lock:
+                    logger.error(msg)
+            else:
+                with lock:
+                    logger.error(
+                        f"The following message was logged with unknown log-level {loglevel}:\n{msg}"
+                    )
         else:
-            with lock:
+            if loglevel == "DEBUG":
+                logger.debug(msg)
+            elif loglevel == "INFO":
+                logger.info(msg)
+            elif loglevel == "WARN":
+                logger.warning(msg)
+            elif loglevel == "ERROR":
+                logger.error(msg)
+            else:
                 logger.error(
                     f"The following message was logged with unknown log-level {loglevel}:\n{msg}"
                 )
-    else:
-        if loglevel == "DEBUG":
-            logger.debug(msg)
-        elif loglevel == "INFO":
-            logger.info(msg)
-        elif loglevel == "WARN":
-            logger.warning(msg)
-        elif loglevel == "ERROR":
-            logger.error(msg)
-        else:
-            logger.error(
-                f"The following message was logged with unknown log-level {loglevel}:\n{msg}"
-            )
 
 
 def find_module(full_module_name: str):

@@ -9,12 +9,15 @@
 #include <algorithm>
 #include <vector>
 #include <cstdio>
+#include <fstream>
+#include <iostream>
 
 void SilenceOutput()
 {
-    std::freopen("/dev/null", "a", stdout);
+    static std::ofstream nullstream("/dev/null");
+    std::cout.rdbuf(nullstream.rdbuf());
+    std::cerr.rdbuf(nullstream.rdbuf());
 }
-
 int UnweightedReduce(const int num_nodes, const int num_edges, const int* edges_from, const int* edges_to, int* reduction_result)
 {
     // build adjacency list

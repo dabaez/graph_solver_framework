@@ -1,3 +1,5 @@
+import logzero
+
 from framework.core.graph import FrameworkGraph
 from framework.core.registries import register_solver
 from framework.core.solver import Solution
@@ -5,6 +7,7 @@ from framework.core.solver import Solution
 from .config import (
     cuda_devs,
     local_search,
+    logs,
     max_prob_maps,
     model_prob_maps,
     noise_as_prob_maps,
@@ -25,7 +28,8 @@ class PYGTreeSearchSolver:
         return "A solver that uses a tree search algorithm together with a neural network from PyTorch Geometric to find a maximum independent set."
 
     def solve(self, graph: FrameworkGraph) -> Solution:
-        print("solving with pyg_treesearch...")
+        if not logs:
+            logzero.loglevel(logzero.ERROR)
         solution = solve(
             self_loop=self_loop,
             threadcount=thread_count,
@@ -41,5 +45,4 @@ class PYGTreeSearchSolver:
             pretrained_weights=pretrained_weights,
             input=graph,
         )
-        print("solution found!")
         return solution

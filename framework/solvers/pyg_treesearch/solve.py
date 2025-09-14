@@ -316,8 +316,6 @@ def solve(
         transforms = T.RemoveSelfLoops()
         g = transforms(g)
 
-    print("??")
-
     if threadcount > 1:
         (
             best_solution,
@@ -365,13 +363,8 @@ def solve(
             noise_as_prob_maps,
             weighted_queue_pop,
         )
-
-    print("??")
-
     if best_solution is not None:
         best_solution = [str(v) for v in np.ravel(best_solution).tolist()]
-
-    print("??")
 
     return Solution(
         mis=MaximumIndependentSet(best_solution if best_solution is not None else []),

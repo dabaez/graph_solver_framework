@@ -10,3 +10,4 @@ queue_pruning = True
 noise_as_prob_maps = False
 weighted_queue_pop = True
 pretrained_weights = "data/pyg_treesearch/modelw/1754882969_final_model32.pt"
+logs = False
