@@ -212,7 +212,7 @@ if __name__ == "__main__":
         ).ask()
 
     if args.output_dir is None:
-        args.output_dir = questionary.path("Select an output directory:").ask()
+        args.output_dir = Path(questionary.path("Select an output directory:").ask())
 
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
