@@ -13,4 +13,5 @@ dependencies = [
     "questionary>=2.1.0",
     "torch>=2.7.1",
     "torch-geometric>=2.6.1",
+    "torch-scatter>=2.1.2",
 ]
