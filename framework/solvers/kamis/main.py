@@ -38,16 +38,13 @@ def kamis_solver(file: str, name: str, description: str):
             script_path = Path(__file__).parent / "KaMIS" / "deploy" / file
 
             start_time = time.time()
-            output = subprocess.run(
+            subprocess.run(
                 f"{str(script_path)} {input_file_path} --output={output_file_path} --time_limit={time_limit}",
                 shell=True,
                 check=True,
                 capture_output=True,
             )
             end_time = time.time()
-
-            print(output.stdout.decode())
-            print(output.stderr.decode())
 
             mis_list = []
             with open(output_file_path, "r") as output_file:
