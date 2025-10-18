@@ -65,6 +65,7 @@ def statistical_measures_from_list(
                 log_abs_skew = math.log(abs(skewness) + 1e-10)
                 skew_positive = 1.0 if skewness > 0 else 0.0
                 log_kurtosis = math.log(abs(kurtosis) + 1e-10)
+                const = 1.0 if all(x == values[0] for x in values) else 0.0
 
             return [
                 Feature(f"{feature_extractor.name()}_mean", mean),
