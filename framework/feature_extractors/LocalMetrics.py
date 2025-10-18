@@ -37,7 +37,45 @@ def statistical_measures_from_list(
                 f"{feature_extractor.name()}_const",
             ]
 
-        def extract_features(self, graph: FrameworkGraph) -> list[Feature]: ...
+        def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+            values = feature_extractor.extract_features(graph)
+            n = len(values)
+            if n == 0:
+                mean = std_dev = min_value = max_value = log_abs_skew = (
+                    skew_positive
+                ) = log_kurtosis = 0.0
+                const = 1.0
+            else:
+                mean = sum(values) / n
+                variance = sum((x - mean) ** 2 for x in values) / n
+                std_dev = math.sqrt(variance)
+
+                min_value = min(values)
+                max_value = max(values)
+
+                if std_dev == 0:
+                    skewness = 0.0
+                    kurtosis = 0.0
+                else:
+                    skewness = (sum((x - mean) ** 3 for x in values) / n) / (std_dev**3)
+                    kurtosis = (sum((x - mean) ** 4 for x in values) / n) / (
+                        std_dev**4
+                    ) - 3
+
+                log_abs_skew = math.log(abs(skewness) + 1e-10)
+                skew_positive = 1.0 if skewness > 0 else 0.0
+                log_kurtosis = math.log(abs(kurtosis) + 1e-10)
+
+            return [
+                Feature(f"{feature_extractor.name()}_mean", mean),
+                Feature(f"{feature_extractor.name()}_std_dev", std_dev),
+                Feature(f"{feature_extractor.name()}_min", min_value),
+                Feature(f"{feature_extractor.name()}_max", max_value),
+                Feature(f"{feature_extractor.name()}_log_abs_skew", log_abs_skew),
+                Feature(f"{feature_extractor.name()}_skew_positive", skew_positive),
+                Feature(f"{feature_extractor.name()}_log_kurtosis", log_kurtosis),
+                Feature(f"{feature_extractor.name()}_const", const),
+            ]
 
     return StatisticalMeasures
 
