@@ -8,6 +8,9 @@ from .GlobalMetrics import (
 )
 from .LocalMetrics import (
     AverageDegreeConnectivityFeatureExtractor,
+    AverageNeighborDegreeFeatureExtractor,
+    ClusteringCoefficientFeatureExtractor,
+    CoreNumberFeatureExtractor,
     NodeDegreeFeatureExtractor,
 )
 from .MachineLearningFeatures import GreedyLabels

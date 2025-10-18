@@ -1,3 +1,5 @@
+import math
+import random
 from typing import Protocol, Type
 
 import networkx as nx
@@ -68,3 +70,60 @@ class NodeDegree:
 
 
 NodeDegreeFeatureExtractor = statistical_measures_from_list(NodeDegree())
+
+
+class ClusteringCoefficient:
+    def description(self) -> str:
+        return "Extracts the clustering coefficients of the graph."
+
+    def name(self) -> str:
+        return "Clustering Coefficient"
+
+    def extract_features(self, graph: FrameworkGraph) -> list[float]:
+        n = graph.graph_object.number_of_nodes()
+        k = min(n, 3 * math.ceil(math.log(n)))
+        all_nodes = list(graph.graph_object.nodes())
+        sampled_nodes = random.sample(all_nodes, k)
+        return list(nx.clustering(graph.graph_object, sampled_nodes).values())  # type: ignore
+
+
+ClusteringCoefficientFeatureExtractor = statistical_measures_from_list(
+    ClusteringCoefficient()
+)
+
+
+class AverageNeighborDegree:
+    def description(self) -> str:
+        return "Extracts the average neighbor degrees of the graph."
+
+    def name(self) -> str:
+        return "Average Neighbor Degree"
+
+    def extract_features(self, graph: FrameworkGraph) -> list[float]:
+        nodes_with_neighbors = [
+            n
+            for n in graph.graph_object.nodes()
+            if len(list(graph.graph_object.neighbors(n))) > 0
+        ]
+        return nx.average_neighbor_degree(
+            graph.graph_object, nodes=nodes_with_neighbors
+        ).values()  # type: ignore
+
+
+AverageNeighborDegreeFeatureExtractor = statistical_measures_from_list(
+    AverageNeighborDegree()
+)
+
+
+class CoreNumber:
+    def description(self) -> str:
+        return "Extracts the core numbers of the graph."
+
+    def name(self) -> str:
+        return "Core Number"
+
+    def extract_features(self, graph: FrameworkGraph) -> list[float]:
+        return list(nx.core_number(graph.graph_object).values())
+
+
+CoreNumberFeatureExtractor = statistical_measures_from_list(CoreNumber())
