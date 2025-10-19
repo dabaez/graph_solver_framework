@@ -29,7 +29,8 @@ def kamis_solver(file: str, name: str, description: str):
                     )
                     dict = nx.to_dict_of_lists(graph_object)
                     for i in range(graph_object.number_of_nodes()):
-                        neighbors = sorted(dict.get(str(i + 1), []), key=int)
+                        neighbors = sorted(dict.get(i + 1, []))
+                        neighbors = [str(neighbor) for neighbor in neighbors]
                         f.write(" ".join(neighbors) + "\n")
 
                 input_file_path = input_file.name
