@@ -50,7 +50,7 @@ def kamis_solver(file: str, name: str, description: str):
             mis_list = []
             with open(output_file_path, "r") as output_file:
                 for i, line in enumerate(output_file):
-                    if line == "1":
+                    if int(line) == 1:
                         mis_list.append(str(i + 1))
 
             os.remove(input_file_path)

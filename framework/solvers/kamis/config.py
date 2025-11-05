@@ -1,1 +1,1 @@
-time_limit = 300
+time_limit = 60
