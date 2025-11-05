@@ -1,0 +1,23 @@
+datasets:
+  - type: "generated"
+    generator: "test_creator"
+feature_extractors:
+  - name: "Logarithm of Nodes and Edges"
+    overwrite: true
+  - name: "Graph Conectivity"
+  - name: "Chromatic Number"
+  - name: "Graph Assortativity"
+  - name: "Approximate MIS"
+  - name: "Laplacian Eigenvalues"
+  - name: "Average Degree Connectivity"
+  - name: "Node Degree"
+  - name: "Clustering Coefficient"
+  - name: "Average Neighbor Degree"
+  - name: "Core Number"
+solvers:
+  - name: "GreedyCPPSolver"
+    overwrite: true
+  - name: "ReduMISSolver"
+  - name: "OnlineMISSolver"
+  - name: "WeightedBranchAndReduceSolver"
+  - name: "WeightedLocalSearchSolver"
