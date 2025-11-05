@@ -119,7 +119,9 @@ def save_solver_solution(
     solver_name: str, solution: list[Solution], dataset_name: str
 ) -> str:
     """Save a solver's solution to the solutions folder."""
-    file_path = os.path.join(SOLUTIONS_FOLDER, f"{solver_name}_{dataset_name}.csv")
+    dir_path = os.path.join(SOLUTIONS_FOLDER, dataset_name)
+    os.makedirs(dir_path, exist_ok=True)
+    file_path = os.path.join(dir_path, f"{solver_name}.csv")
     with open(file_path, "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Graph Index", "Solution length", "Time taken", "Solution"])
