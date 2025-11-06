@@ -106,11 +106,20 @@ def explore_dataset(dataset_name: str):
     print(f"Dataset: {dataset_name}")
     print(f"Number of graphs: {len(dataset)}")
     if calculated_features:
-        print("Dataset has the following calculated features:")
-        for feature, percentage in calculated_features.items():
-            print(
-                f"{feature}: {percentage:.2f}% of graphs have this feature calculated."
-            )
+        fully_calculated_features = [
+            feature
+            for feature, percentage in calculated_features.items()
+            if percentage == 100.0
+        ]
+        non_fully_calculated_features = [
+            f"{feature} ({percentage:.2f}%)"
+            for feature, percentage in calculated_features.items()
+            if percentage < 100.0
+        ]
+        if fully_calculated_features:
+            print(f"Features fully calculated for all graphs: {', '.join(fully_calculated_features)}")
+        if non_fully_calculated_features:
+            print(f"Features partially calculated: {', '.join(non_fully_calculated_features)}")
     else:
         print("No calculated features found in this dataset.")
     chosen_option = questionary.select(
