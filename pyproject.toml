@@ -7,12 +7,16 @@ requires-python = ">=3.12"
 dependencies = [
     "cmake>=4.0.3",
     "logzero>=1.7.0",
+    "matplotlib>=3.10.7",
     "networkx>=3.5",
     "pybind11[global]>=3.0.0",
     "python-sat>=1.8.dev19",
+    "pyyaml>=6.0.3",
     "questionary>=2.1.0",
+    "scikit-learn>=1.7.2",
     "scipy>=1.16.2",
     "torch>=2.7.1",
     "torch-geometric>=2.6.1",
     "torch-scatter>=2.1.2",
+    "tqdm>=4.67.1",
 ]

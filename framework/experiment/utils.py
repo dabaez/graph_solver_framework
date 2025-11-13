@@ -53,7 +53,7 @@ def save_dataset(dataset: Dataset) -> str:
     file_path = os.path.join(DATASETS_FOLDER, file_name)
     with open(file_path, "wb") as file:
         pickle.dump(dataset, file)
-    return file_name
+    return file_name[:-4]
 
 
 def save_dataset_with_name(dataset: Dataset, dataset_name: str) -> str:
@@ -81,6 +81,8 @@ def CalculatedFeaturesPercentageFromDataset(dataset: Dataset) -> dict[str, float
     feature_counts = CalculatedFeaturesFromDataset(dataset)
     return {name: count / total_graphs * 100 for name, count in feature_counts.items()}
 
+def fully_calculated_features(dataset: Dataset) -> list[str]:
+    return [name for name,count in CalculatedFeaturesFromDataset(dataset).items() if count == len(dataset)]
 
 def dataset_exists(dataset_name: str) -> bool:
     """Check if a dataset exists in the datasets folder."""

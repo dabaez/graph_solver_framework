@@ -1,0 +1,71 @@
+datasets:
+  - type: "loaded"
+    name: "dimacs"
+feature_extractors:
+  - name: "Logarithm of Nodes and Edges"
+  - name: "Graph Conectivity"
+  - name: "Chromatic Number"
+  - name: "Graph Assortativity"
+  - name: "Approximate MIS"
+  - name: "Laplacian Eigenvalues"
+  - name: "Average Degree Connectivity"
+  - name: "Node Degree"
+  - name: "Clustering Coefficient"
+  - name: "Average Neighbor Degree"
+  - name: "Core Number"
+solvers:
+  - name: "GreedyCPPSolver"
+  - name: "ReduMISSolver"
+  - name: "OnlineMISSolver"
+  - name: "WeightedBranchAndReduceSolver"
+analyze:
+  features:
+    - log_number_of_nodes
+    - log_number_of_edges
+    - is_connected
+    - chromatic_number
+    - assortativity_coefficient
+    - approximate_mis_size
+    - log_largest_eigenvalue
+    - log_second_smallest_eigenvalue
+    - log_eigenvalue_ratio
+    - Average Degree Connectivity_mean
+    - Average Degree Connectivity_std_dev
+    - Average Degree Connectivity_min
+    - Average Degree Connectivity_max
+    - Average Degree Connectivity_log_abs_skew
+    - Average Degree Connectivity_skew_positive
+    - Average Degree Connectivity_log_kurtosis
+    - Average Degree Connectivity_const
+    - Node Degree_mean
+    - Node Degree_std_dev
+    - Node Degree_min
+    - Node Degree_max
+    - Node Degree_log_abs_skew
+    - Node Degree_skew_positive
+    - Node Degree_log_kurtosis
+    - Node Degree_const
+    - Clustering Coefficient_mean
+    - Clustering Coefficient_std_dev
+    - Clustering Coefficient_min
+    - Clustering Coefficient_max
+    - Clustering Coefficient_log_abs_skew
+    - Clustering Coefficient_skew_positive
+    - Clustering Coefficient_log_kurtosis
+    - Clustering Coefficient_const
+    - Average Neighbor Degree_mean
+    - Average Neighbor Degree_std_dev
+    - Average Neighbor Degree_min
+    - Average Neighbor Degree_max
+    - Average Neighbor Degree_log_abs_skew
+    - Average Neighbor Degree_skew_positive
+    - Average Neighbor Degree_log_kurtosis
+    - Average Neighbor Degree_const
+    - Core Number_mean
+    - Core Number_std_dev
+    - Core Number_min
+    - Core Number_max
+    - Core Number_log_abs_skew
+    - Core Number_skew_positive
+    - Core Number_log_kurtosis
+    - Core Number_const
