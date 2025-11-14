@@ -131,7 +131,7 @@ def analyzer(
     tree.plot_tree(
         clf,
         feature_names=features,
-        class_names=solvers,
+        class_names=[solver for solver in solvers if solver in best_solvers],
         filled=True,
     )
     plt.savefig(
