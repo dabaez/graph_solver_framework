@@ -53,7 +53,7 @@ def save_dataset(dataset: Dataset) -> str:
     file_path = os.path.join(DATASETS_FOLDER, file_name)
     with open(file_path, "wb") as file:
         pickle.dump(dataset, file)
-    return file_name
+    return file_name[:-4]
 
 
 def save_dataset_with_name(dataset: Dataset, dataset_name: str) -> str:
@@ -81,6 +81,8 @@ def CalculatedFeaturesPercentageFromDataset(dataset: Dataset) -> dict[str, float
     feature_counts = CalculatedFeaturesFromDataset(dataset)
     return {name: count / total_graphs * 100 for name, count in feature_counts.items()}
 
+def fully_calculated_features(dataset: Dataset) -> list[str]:
+    return [name for name,count in CalculatedFeaturesFromDataset(dataset).items() if count == len(dataset)]
 
 def dataset_exists(dataset_name: str) -> bool:
     """Check if a dataset exists in the datasets folder."""
@@ -119,7 +121,9 @@ def save_solver_solution(
     solver_name: str, solution: list[Solution], dataset_name: str
 ) -> str:
     """Save a solver's solution to the solutions folder."""
-    file_path = os.path.join(SOLUTIONS_FOLDER, f"{solver_name}_{dataset_name}.csv")
+    dir_path = os.path.join(SOLUTIONS_FOLDER, dataset_name)
+    os.makedirs(dir_path, exist_ok=True)
+    file_path = os.path.join(dir_path, f"{solver_name}.csv")
     with open(file_path, "w", newline="") as file:
         writer = csv.writer(file)
         writer.writerow(["Graph Index", "Solution length", "Time taken", "Solution"])

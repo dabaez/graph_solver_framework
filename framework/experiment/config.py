@@ -1,3 +1,4 @@
 DATA_FOLDER = "data"
 DATASETS_FOLDER = f"{DATA_FOLDER}/datasets"
 SOLUTIONS_FOLDER = f"{DATA_FOLDER}/solutions"
+ANALYSIS_FOLDER = f"{DATA_FOLDER}/analysis"

@@ -29,7 +29,7 @@ def kamis_solver(file: str, name: str, description: str):
                     )
                     dict = nx.to_dict_of_lists(graph_object)
                     for i in range(graph_object.number_of_nodes()):
-                        neighbors = sorted(dict.get(i + 1, []))
+                        neighbors = sorted(dict.get(i + 1, []), key=int)
                         neighbors = [str(neighbor) for neighbor in neighbors]
                         f.write(" ".join(neighbors) + "\n")
 
@@ -50,8 +50,8 @@ def kamis_solver(file: str, name: str, description: str):
             mis_list = []
             with open(output_file_path, "r") as output_file:
                 for i, line in enumerate(output_file):
-                    if line == "1":
-                        mis_list.append(str(i + 1))
+                    if int(line) == 1:
+                        mis_list.append(i + 1)
 
             os.remove(input_file_path)
             os.remove(output_file_path)

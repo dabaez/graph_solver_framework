@@ -23,7 +23,7 @@ def normalize_labels(start_index: int) -> Callable:
                 label: i + start_index for i, label in enumerate(original_labels)
             }
             normalized_to_label = {
-                i + start_index: label for i, label in enumerate(original_labels)
+                i + start_index: str(label) for i, label in enumerate(original_labels)
             }
 
             normalized_graph = nx.relabel_nodes(graph.graph_object, label_to_normalized)
@@ -32,7 +32,7 @@ def normalize_labels(start_index: int) -> Callable:
             result = func(self, normalized_framework_graph)
 
             result.mis = MaximumIndependentSet(
-                [str(normalized_to_label[int(node)]) for node in result.mis]
+                [normalized_to_label[node] for node in result.mis]
             )
 
             return result

@@ -148,7 +148,7 @@ class AverageNeighborDegree:
             nx.average_neighbor_degree(
                 graph.graph_object, nodes=nodes_with_neighbors
             ).values()
-        )
+        )  # type: ignore
 
 
 AverageNeighborDegreeFeatureExtractor = statistical_measures_from_list(

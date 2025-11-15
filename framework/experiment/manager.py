@@ -1,4 +1,5 @@
 import questionary
+from tqdm import tqdm
 
 import framework.dataset_creators  # noqa: F401
 import framework.feature_extractors  # noqa: F401
@@ -282,7 +283,7 @@ def explore_feature_extractor(extractor_name: str):
         overwrite__features = questionary.confirm(
             "Some features are already present in the dataset. Do you want to overwrite them? 'Y' for overwrite, 'N' to skip those features."
         ).ask()
-    for graph in dataset:
+    for graph in tqdm(dataset):
         calculated_features = extractor_instance.extract_features(graph)
         for feature in calculated_features:
             graph.add_feature(feature, overwrite=overwrite__features)
@@ -321,7 +322,9 @@ def explore_solver(solver_name: str):
     except Exception as e:
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
-    solutions = [solver_instance.solve(graph) for graph in dataset]
+    solutions = []
+    for graph in tqdm(dataset):
+        solutions.append(solver_instance.solve(graph))
     solution_file = save_solver_solution(solver_name, solutions, dataset_name)
     print(f"Solutions saved to '{solution_file}'.")
 
