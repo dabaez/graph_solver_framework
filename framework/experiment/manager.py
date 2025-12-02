@@ -1,3 +1,6 @@
+import os
+
+import numpy as np
 import questionary
 from tqdm import tqdm
 
@@ -14,6 +17,7 @@ from .config import DATA_FOLDER, DATASETS_FOLDER, SOLUTIONS_FOLDER
 from .utils import (
     CalculatedFeaturesFromDataset,
     CalculatedFeaturesPercentageFromDataset,
+    calculate_feature_correlation_matrix,
     create_folder_if_not_exists,
     dataset_exists,
     delete_dataset,
@@ -23,6 +27,7 @@ from .utils import (
     list_registered_dataset_solvers,
     load_dataset,
     merge_datasets,
+    plot_feature_correlation_matrix,
     rename_dataset,
     save_dataset,
     save_dataset_with_name,
@@ -133,6 +138,7 @@ def explore_dataset(dataset_name: str):
             "Explore graphs in this dataset",
             "Rename this dataset",
             "Delete this dataset",
+            "Get feature correlation matrix",
             "Go back",
         ],
     ).ask()
@@ -181,6 +187,38 @@ def explore_dataset(dataset_name: str):
         ).ask():
             delete_dataset(dataset_name)
             print(f"Dataset '{dataset_name}' deleted.")
+    elif chosen_option == "Get feature correlation matrix":
+        calculated_features = CalculatedFeaturesFromDataset(dataset)
+        chosen_features = questionary.checkbox(
+            "Select features to include in the correlation matrix (choose none to go back):",
+            choices=list(calculated_features.keys()),
+        ).ask()
+        if not chosen_features:
+            return
+        correlation_matrix = calculate_feature_correlation_matrix(
+            dataset, chosen_features
+        )
+
+        top_correlated_pairs = []
+        for i in range(len(chosen_features)):
+            for j in range(i + 1, len(chosen_features)):
+                corr_value = correlation_matrix[i][j]
+                if not np.isnan(corr_value):
+                    top_correlated_pairs.append(
+                        (chosen_features[i], chosen_features[j], corr_value)
+                    )
+        top_correlated_pairs.sort(key=lambda x: abs(x[2]), reverse=True)
+        print(top_correlated_pairs)
+        print("Top correlated feature pairs:")
+        for feature1, feature2, corr_value in top_correlated_pairs[
+            : 2 * len(chosen_features)
+        ]:
+            print(f"{feature1} - {feature2}: {corr_value:.4f}")
+
+        filename = f"{dataset_name}_feature_correlation_matrix.png"
+        path = os.path.join(DATA_FOLDER, filename)
+        plot_feature_correlation_matrix(correlation_matrix, chosen_features, path)
+        print(f"Feature correlation matrix saved as '{filename}'.")
 
 
 def explore_dataset_creators():

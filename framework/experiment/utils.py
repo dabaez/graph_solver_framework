@@ -2,6 +2,10 @@ import csv
 import os
 import pickle
 
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import pearsonr
+
 from framework.core.graph import Dataset
 from framework.core.registries import (
     DATASET_CREATORS,
@@ -81,8 +85,14 @@ def CalculatedFeaturesPercentageFromDataset(dataset: Dataset) -> dict[str, float
     feature_counts = CalculatedFeaturesFromDataset(dataset)
     return {name: count / total_graphs * 100 for name, count in feature_counts.items()}
 
+
 def fully_calculated_features(dataset: Dataset) -> list[str]:
-    return [name for name,count in CalculatedFeaturesFromDataset(dataset).items() if count == len(dataset)]
+    return [
+        name
+        for name, count in CalculatedFeaturesFromDataset(dataset).items()
+        if count == len(dataset)
+    ]
+
 
 def dataset_exists(dataset_name: str) -> bool:
     """Check if a dataset exists in the datasets folder."""
@@ -112,6 +122,53 @@ def rename_dataset(old_name: str, new_name: str) -> None:
     old_path = os.path.join(DATASETS_FOLDER, f"{old_name}.pkl")
     new_path = os.path.join(DATASETS_FOLDER, f"{new_name}.pkl")
     os.rename(old_path, new_path)
+
+
+def calculate_feature_correlation_matrix(
+    dataset: Dataset, features: list[str]
+) -> list[list[float]]:
+    """
+    Calculate the Pearson correlation matrix for the features in the dataset.
+
+    Args:
+        dataset (Dataset): The dataset containing features.
+        features (list[str]): List of feature names to calculate correlation for.
+
+    Returns:
+        list[list[float]]: A 2D list representing the correlation matrix.
+    """
+    feature_arrays = [[] for _ in features]
+
+    for graph in dataset:
+        for i, feature_name in enumerate(features):
+            feature_arrays[i].append(graph.features[feature_name])
+
+    correlation_matrix = [[0.0] * len(features) for _ in range(len(features))]
+
+    for i in range(len(features)):
+        correlation_matrix[i][i] = 1.0
+        for j in range(i + 1, len(features)):
+            corr, _ = pearsonr(feature_arrays[i], feature_arrays[j])
+            correlation_matrix[i][j] = corr  # type: ignore
+            correlation_matrix[j][i] = corr  # type: ignore
+
+    return correlation_matrix
+
+
+def plot_feature_correlation_matrix(
+    correlation_matrix: list[list[float]], features: list[str], pathname: str
+) -> None:
+    """Plot the feature correlation matrix using matplotlib."""
+
+    plt.figure(figsize=(max(8, len(features) * 0.5), max(6, len(features) * 0.5)))
+    plt.imshow(correlation_matrix, cmap="coolwarm", vmin=-1, vmax=1)
+    plt.colorbar(label="Pearson Correlation Coefficient")
+    plt.xticks(ticks=np.arange(len(features)), labels=features, rotation=90)
+    plt.yticks(ticks=np.arange(len(features)), labels=features)
+    plt.title("Feature Correlation Matrix")
+    plt.tight_layout()
+    plt.savefig(pathname)
+    plt.close()
 
 
 ##### SOLVERS #####
