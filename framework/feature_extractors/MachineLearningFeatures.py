@@ -1,6 +1,7 @@
+import networkx as nx
 import numpy as np
 
-from framework.core.graph import Feature, FrameworkGraph
+from framework.core.feature_extractor import Feature
 from framework.core.registries import register_feature_extractor
 from framework.solvers.cpp_greedy.GreedyCPPSolver import GreedyCPPSolver
 
@@ -14,16 +15,13 @@ class GreedyLabels:
     def feature_names(self) -> list[str]:
         return ["labels"]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
         solution = GreedyCPPSolver().solve(graph)
         return [
             Feature(
                 name="labels",
                 value=np.array(
-                    [
-                        int(str(node_label) in solution.mis)
-                        for node_label in graph.graph_object.nodes
-                    ]
+                    [int(str(node_label) in solution.mis) for node_label in graph.nodes]
                 ),
             )
         ]

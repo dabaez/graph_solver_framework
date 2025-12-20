@@ -2,7 +2,7 @@ import math
 
 import networkx as nx
 
-from framework.core.graph import Feature, FrameworkGraph
+from framework.core.feature_extractor import Feature
 from framework.core.registries import register_feature_extractor
 from framework.solvers.cpp_greedy.GreedyCPPSolver import GreedyCPPSolver
 
@@ -15,9 +15,9 @@ class LogarithmOfNodesAndEdges:
     def feature_names(self) -> list[str]:
         return ["log_number_of_nodes", "log_number_of_edges"]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
-        num_nodes = graph.graph_object.number_of_nodes()
-        num_edges = graph.graph_object.number_of_edges()
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
+        num_nodes = graph.number_of_nodes()
+        num_edges = graph.number_of_edges()
 
         log_num_nodes = Feature(
             name="log_number_of_nodes",
@@ -39,11 +39,11 @@ class GraphConectivity:
     def feature_names(self) -> list[str]:
         return ["is_connected"]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
         return [
             Feature(
                 name="is_connected",
-                value=1 if nx.is_connected(graph.graph_object) else 0,
+                value=1 if nx.is_connected(graph) else 0,
             )
         ]
 
@@ -56,10 +56,8 @@ class ChromaticNumber:
     def feature_names(self) -> list[str]:
         return ["chromatic_number"]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
-        coloring = nx.coloring.greedy_color(
-            graph.graph_object, strategy="largest_first"
-        )
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
+        coloring = nx.coloring.greedy_color(graph, strategy="largest_first")
         chromatic_number = max(coloring.values()) + 1
         return [
             Feature(
@@ -79,11 +77,11 @@ class GraphAssortativity:
     def feature_names(self) -> list[str]:
         return ["assortativity_coefficient"]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
         return [
             Feature(
                 name="assortativity_coefficient",
-                value=nx.degree_assortativity_coefficient(graph.graph_object),
+                value=nx.degree_assortativity_coefficient(graph),
             )
         ]
 
@@ -96,13 +94,13 @@ class ApproximateMIS:
     def feature_names(self) -> list[str]:
         return ["approximate_mis_size"]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
         solution = GreedyCPPSolver().solve(graph)
         return [
             Feature(
                 name="approximate_mis_size",
-                value=len(solution.mis) / graph.graph_object.number_of_nodes()
-                if graph.graph_object.number_of_nodes() > 0
+                value=len(solution.mis) / graph.number_of_nodes()
+                if graph.number_of_nodes() > 0
                 else 0,
             )
         ]
@@ -120,14 +118,14 @@ class LaplacianEigenvalues:
             "log_eigenvalue_ratio",
         ]
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
-        eigenvalues = nx.laplacian_spectrum(graph.graph_object)
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
+        eigenvalues = nx.laplacian_spectrum(graph)
         ev1 = eigenvalues[-1]
         ev2 = eigenvalues[-2]
 
         avg_degree = (
-            sum(dict(graph.graph_object.degree()).values())  # type: ignore
-            / graph.graph_object.number_of_nodes()
+            sum(dict(graph.degree()).values())  # type: ignore
+            / graph.number_of_nodes()
         )
 
         log_largest_eigenvalue = Feature(

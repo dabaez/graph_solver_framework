@@ -1,6 +1,13 @@
-from typing import Protocol, runtime_checkable
+from dataclasses import dataclass
+from typing import Any, Protocol, runtime_checkable
 
-from framework.core.graph import Feature, FrameworkGraph
+import networkx as nx
+
+
+@dataclass
+class Feature:
+    name: str
+    value: Any
 
 
 @runtime_checkable
@@ -23,7 +30,7 @@ class FeatureExtractor(Protocol):
         """
         ...
 
-    def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+    def extract_features(self, graph: nx.Graph) -> list[Feature]:
         """
         Extract features from the given graph.
 

@@ -4,8 +4,7 @@ from typing import Protocol, Type
 
 import networkx as nx
 
-from framework.core.feature_extractor import FeatureExtractor
-from framework.core.graph import Feature, FrameworkGraph
+from framework.core.feature_extractor import Feature, FeatureExtractor
 from framework.core.registries import register_feature_extractor
 
 
@@ -14,7 +13,7 @@ class LocalMetricsFeatureExtractor(Protocol):
 
     def name(self) -> str: ...
 
-    def extract_features(self, graph) -> list[float]: ...
+    def extract_features(self, graph: nx.Graph) -> list[float]: ...
 
 
 def statistical_measures_from_list(
@@ -37,7 +36,7 @@ def statistical_measures_from_list(
                 f"{feature_extractor.name()}_const",
             ]
 
-        def extract_features(self, graph: FrameworkGraph) -> list[Feature]:
+        def extract_features(self, graph: nx.Graph) -> list[Feature]:
             values = feature_extractor.extract_features(graph)
             n = len(values)
             if n == 0:
@@ -88,8 +87,8 @@ class AverageDegreeConnectivity:
     def name(self) -> str:
         return "Average Degree Connectivity"
 
-    def extract_features(self, graph: FrameworkGraph) -> list[float]:
-        return list(nx.average_degree_connectivity(graph.graph_object).values())
+    def extract_features(self, graph: nx.Graph) -> list[float]:
+        return list(nx.average_degree_connectivity(graph).values())
 
 
 AverageDegreeConnectivityFeatureExtractor = statistical_measures_from_list(
@@ -104,8 +103,8 @@ class NodeDegree:
     def name(self) -> str:
         return "Node Degree"
 
-    def extract_features(self, graph: FrameworkGraph) -> list[float]:
-        return [d for n, d in graph.graph_object.degree()]  # type: ignore
+    def extract_features(self, graph: nx.Graph) -> list[float]:
+        return [d for n, d in graph.degree()]
 
 
 NodeDegreeFeatureExtractor = statistical_measures_from_list(NodeDegree())
@@ -118,12 +117,12 @@ class ClusteringCoefficient:
     def name(self) -> str:
         return "Clustering Coefficient"
 
-    def extract_features(self, graph: FrameworkGraph) -> list[float]:
-        n = graph.graph_object.number_of_nodes()
+    def extract_features(self, graph: nx.Graph) -> list[float]:
+        n = graph.number_of_nodes()
         k = min(n, 3 * math.ceil(math.log(n)))
-        all_nodes = list(graph.graph_object.nodes())
+        all_nodes = list(graph.nodes())
         sampled_nodes = random.sample(all_nodes, k)
-        return list(nx.clustering(graph.graph_object, sampled_nodes).values())  # type: ignore
+        return list(nx.clustering(graph, sampled_nodes).values())  # type: ignore
 
 
 ClusteringCoefficientFeatureExtractor = statistical_measures_from_list(
@@ -138,17 +137,13 @@ class AverageNeighborDegree:
     def name(self) -> str:
         return "Average Neighbor Degree"
 
-    def extract_features(self, graph: FrameworkGraph) -> list[float]:
+    def extract_features(self, graph: nx.Graph) -> list[float]:
         nodes_with_neighbors = [
-            n
-            for n in graph.graph_object.nodes()
-            if len(list(graph.graph_object.neighbors(n))) > 0
+            n for n in graph.nodes() if len(list(graph.neighbors(n))) > 0
         ]
         return list(
-            nx.average_neighbor_degree(
-                graph.graph_object, nodes=nodes_with_neighbors
-            ).values()
-        )  # type: ignore
+            nx.average_neighbor_degree(graph, nodes=nodes_with_neighbors).values()
+        )
 
 
 AverageNeighborDegreeFeatureExtractor = statistical_measures_from_list(
@@ -163,8 +158,8 @@ class CoreNumber:
     def name(self) -> str:
         return "Core Number"
 
-    def extract_features(self, graph: FrameworkGraph) -> list[float]:
-        return list(nx.core_number(graph.graph_object).values())
+    def extract_features(self, graph: nx.Graph) -> list[float]:
+        return list(nx.core_number(graph).values())
 
 
 CoreNumberFeatureExtractor = statistical_measures_from_list(CoreNumber())
