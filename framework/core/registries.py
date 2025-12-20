@@ -1,17 +1,17 @@
 from typing import Callable, Type
 
-from framework.core.dataset_creator import DatasetCreator
 from framework.core.feature_extractor import FeatureExtractor
+from framework.core.graph_creator import GraphCreator
 from framework.core.solver import Solver
 
-DATASET_CREATORS: dict[str, Type[DatasetCreator]] = {}
+DATASET_CREATORS: dict[str, Type[GraphCreator]] = {}
 SOLVERS: dict[str, Type[Solver]] = {}
 FEATURE_EXTRACTORS: dict[str, Type[FeatureExtractor]] = {}
 
 
 def register_dataset_creator(
     name: str,
-) -> Callable[[Type[DatasetCreator]], Type[DatasetCreator]]:
+) -> Callable[[Type[GraphCreator]], Type[GraphCreator]]:
     """
     Decorator to register a dataset creator.
 
@@ -19,7 +19,7 @@ def register_dataset_creator(
     :return: A decorator that registers the dataset creator.
     """
 
-    def decorator(creator: Type[DatasetCreator]) -> Type[DatasetCreator]:
+    def decorator(creator: Type[GraphCreator]) -> Type[GraphCreator]:
         if name in DATASET_CREATORS:
             raise ValueError(
                 f"Dataset creator with name '{name}' is already registered."

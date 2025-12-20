@@ -1,8 +1,9 @@
 import networkx as nx
 
-from framework.core.dataset_creator import RequiredParameter
-from framework.core.graph import Dataset, FrameworkGraph
+from framework.core.graph import Dataset
+from framework.core.graph_creator import RequiredParameter
 from framework.core.registries import register_dataset_creator
+from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
 @register_dataset_creator("test_creator")
@@ -18,7 +19,7 @@ class TestDatasetCreator:
             return False
         return True
 
-    def create_dataset(self, parameters: dict[str, str]) -> Dataset:
+    def create_dataset(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         G = nx.Graph()
         G.add_nodes_from(["A", "B", "C", "D", "E"])
         G.add_edges_from(
@@ -32,4 +33,5 @@ class TestDatasetCreator:
                 ("C", "D"),
             ]
         )
-        return Dataset([FrameworkGraph(G)])
+        dataset.append(create_in_memory_graph(G))
+        return dataset

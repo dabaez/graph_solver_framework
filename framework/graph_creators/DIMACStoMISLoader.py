@@ -2,9 +2,10 @@ import os
 
 import networkx as nx
 
-from framework.core.dataset_creator import RequiredParameter
-from framework.core.graph import Dataset, Feature, FrameworkGraph
+from framework.core.graph import Dataset
+from framework.core.graph_creator import RequiredParameter
 from framework.core.registries import register_dataset_creator
+from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
 @register_dataset_creator("DIMACStoMISLoader")
@@ -27,17 +28,15 @@ class DIMACStoMISLoader:
         folder_path = parameters["folder path"]
         return os.path.isdir(folder_path)
 
-    def create_dataset(self, parameters: dict[str, str]) -> Dataset:
+    def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         folder_path = parameters["folder path"]
-        dataset: Dataset = Dataset([])
 
         for filename in os.listdir(folder_path):
             if filename.endswith(".clq"):
                 file_path = os.path.join(folder_path, filename)
                 graph = self.convert_clique_to_mis(file_path)
-                framework_graph = FrameworkGraph(graph)
-                framework_graph.add_feature(
-                    Feature(name="source_file", value=filename), overwrite=False
+                framework_graph = create_in_memory_graph(
+                    graph, {"source_file": filename}
                 )
                 dataset.append(framework_graph)
 

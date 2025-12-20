@@ -12,12 +12,12 @@ class RequiredParameter:
 
 
 @runtime_checkable
-class DatasetCreator(Protocol):
-    """Base class for dataset creators."""
+class GraphCreator(Protocol):
+    """Base class for graph creators."""
 
     def description(self) -> str:
         """
-        Description of the dataset creator.
+        Description of the graph creator.
         """
         ...
 
@@ -36,11 +36,13 @@ class DatasetCreator(Protocol):
         """
         ...
 
-    def create_dataset(self, parameters: dict[str, str]) -> Dataset:
+    def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         """
-        Create a dataset based on the provided parameters.
+        Create graphs based on the given parameters and add them to the dataset
 
-        :param parameters: A dictionary of parameters to create the dataset.
-        :return: A Dataset object created from the parameters.
+        :param parameters: A dictionary of parameters to create the graphs.
+        :param dataset: A dataset to which to add the created graphs.
+
+        :return: The updated dataset with the created graphs.
         """
         ...
