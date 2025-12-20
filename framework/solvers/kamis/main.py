@@ -87,16 +87,14 @@ WeightedLocalSearchSolver = kamis_solver(
     "Local search algorithm for the weighted independent set problem. From KaMIS.",
 )
 
-# These solver do not write to output right now, so they are disabled.
-#
-# MMWISSolver = kamis_solver(
-#     "mmwis",
-#     "Memetic Maximum Weight Independent Set Solver",
-#     "Iterative reduce and evolution algorithm to solve the maximum weight independent set problem. From KaMIS.",
-# )
+MMWISSolver = kamis_solver(
+    "mmwis",
+    "Memetic Maximum Weight Independent Set Solver",
+    "Iterative reduce and evolution algorithm to solve the maximum weight independent set problem. From KaMIS.",
+)
 
-# StructionSolver = kamis_solver(
-#     "struction",
-#     "StructionSolver",
-#     "new branch and reduce algorithm using increasing transformations. From KaMIS.",
-# )
+StructionSolver = kamis_solver(
+    "struction",
+    "StructionSolver",
+    "new branch and reduce algorithm using increasing transformations. From KaMIS.",
+)

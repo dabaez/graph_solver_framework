@@ -1,7 +1,9 @@
 from .cpp_greedy.GreedyCPPSolver import GreedyCPPSolver
 from .kamis.main import (
+    MMWISSolver,
     OnlineMISSolver,
     ReduMISSolver,
+    StructionSolver,
     WeightedBranchAndReduceSolver,
     WeightedLocalSearchSolver,
 )
