@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from typing import Any, Protocol
 
 import networkx as nx
@@ -12,12 +11,6 @@ class GraphLoader(Protocol):
     def unload(self) -> None:
         """Cleans up any resources used by the loader."""
         ...
-
-
-@dataclass
-class Feature:
-    name: str
-    value: Any
 
 
 class FrameworkGraph:
@@ -35,6 +28,18 @@ class FrameworkGraph:
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self._loader.unload()
+
+    def add_feature(
+        self, feature_name: str, feature_value: Any, overwrite: bool = True
+    ) -> None:
+        """Adds a feature to the graph.
+
+        :param feature_name: Name of the feature.
+        :param feature_value: Value of the feature.
+        :param overwrite: If True, overwrites the feature if it already exists.
+        """
+        if overwrite or feature_name not in self.features:
+            self.features[feature_name] = feature_value
 
 
 class Writer(Protocol):
