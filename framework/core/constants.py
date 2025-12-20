@@ -1,4 +1,0 @@
-TABLE_NAME = "graphs"
-FEATURES_COLUMN_NAME = "features"
-GRAPH_DATA_COLUMN_NAME = "data"
-ID_COLUMN_NAME = "id"
