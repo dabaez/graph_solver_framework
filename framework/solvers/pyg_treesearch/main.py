@@ -1,6 +1,6 @@
 import logzero
+import networkx as nx
 
-from framework.core.graph import FrameworkGraph
 from framework.core.registries import register_solver
 from framework.core.solver import Solution
 
@@ -27,7 +27,7 @@ class PYGTreeSearchSolver:
     def description(self) -> str:
         return "A solver that uses a tree search algorithm together with a neural network from PyTorch Geometric to find a maximum independent set."
 
-    def solve(self, graph: FrameworkGraph) -> Solution:
+    def solve(self, graph: nx.Graph) -> Solution:
         if not logs:
             logzero.loglevel(logzero.ERROR)
         solution = solve(

@@ -15,10 +15,10 @@ def normalize_labels(start_index: int) -> Callable:
     :return: A decorator that normalizes the graph's node labels.
     """
 
-    def decorator(func: Callable[[Any, FrameworkGraph], Solution]) -> Callable:
+    def decorator(func: Callable[[Any, nx.Graph], Solution]) -> Callable:
         @wraps(func)
-        def wrapper(self, graph: FrameworkGraph) -> Solution:
-            original_labels = list(graph.graph_object.nodes())
+        def wrapper(self, graph: nx.Graph) -> Solution:
+            original_labels = list(graph.nodes())
             label_to_normalized = {
                 label: i + start_index for i, label in enumerate(original_labels)
             }
@@ -26,7 +26,7 @@ def normalize_labels(start_index: int) -> Callable:
                 i + start_index: str(label) for i, label in enumerate(original_labels)
             }
 
-            normalized_graph = nx.relabel_nodes(graph.graph_object, label_to_normalized)
+            normalized_graph = nx.relabel_nodes(graph, label_to_normalized)
             normalized_framework_graph = FrameworkGraph(normalized_graph)
 
             result = func(self, normalized_framework_graph)

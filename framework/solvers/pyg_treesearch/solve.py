@@ -4,6 +4,7 @@ import tempfile
 import time
 from pathlib import Path
 
+import networkx as nx
 import numpy as np
 import torch
 import torch.multiprocessing as mp
@@ -13,7 +14,6 @@ from torch.multiprocessing import Lock
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx
 
-from framework.core.graph import FrameworkGraph
 from framework.core.solver import MaximumIndependentSet, Solution
 
 from .treesearch import tree_search_wrapper
@@ -273,8 +273,8 @@ def _run_parallel_treesearch(
     )
 
 
-def convert_dataset_to_pyg(graph: FrameworkGraph) -> Data:
-    G = graph.graph_object.copy()
+def convert_dataset_to_pyg(graph: nx.Graph) -> Data:
+    G = graph.copy()
     pyg_data = from_networkx(G)
     pyg_data.x = torch.ones((pyg_data.num_nodes, 1), dtype=torch.float)
     return pyg_data

@@ -1,6 +1,7 @@
 import time
 
-from framework.core.graph import FrameworkGraph
+import networkx as nx
+
 from framework.core.registries import register_solver
 from framework.core.solver import MaximumIndependentSet, Solution
 from framework.solvers.NodeMappingDecorator import normalize_labels
@@ -17,15 +18,13 @@ class GreedyCPPSolver:
         return "A solver that uses a C++ greedy algorithm to find a maximum independent set. Takes the current lowest degree node and removes it and its neighbors from the graph until no nodes are left."
 
     @normalize_labels(start_index=0)
-    def solve(self, graph: FrameworkGraph) -> Solution:
+    def solve(self, graph: nx.Graph) -> Solution:
         if mis_greedy_cpp is None:
             raise ImportError("C++ solver module is not available.")
 
         start_time = time.time()
 
-        mis = mis_greedy_cpp.solve(
-            graph.graph_object.number_of_nodes(), graph.graph_object.edges()
-        )
+        mis = mis_greedy_cpp.solve(graph.number_of_nodes(), graph.edges())
 
         end_time = time.time()
 

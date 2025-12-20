@@ -1,7 +1,8 @@
 import time
 from typing import Protocol, Type
 
-from framework.core.graph import FrameworkGraph
+import networkx as nx
+
 from framework.core.registries import register_solver
 from framework.core.solver import MaximumIndependentSet, Solution, Solver
 
@@ -17,7 +18,7 @@ class NoTimeSolver(Protocol):
         """
         ...
 
-    def solve(self, graph: FrameworkGraph) -> MaximumIndependentSet:
+    def solve(self, graph: nx.Graph) -> MaximumIndependentSet:
         """
         Solve the problem using the given dataset.
 
@@ -40,7 +41,7 @@ def solver_from_no_time_solver(solver: NoTimeSolver, name: str) -> Type[Solver]:
         def description(self) -> str:
             return solver.description()
 
-        def solve(self, graph: FrameworkGraph) -> Solution:
+        def solve(self, graph: nx.Graph) -> Solution:
             start_time = time.time()
             mis = solver.solve(graph)
             end_time = time.time()

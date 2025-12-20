@@ -6,7 +6,6 @@ from pathlib import Path
 
 import networkx as nx
 
-from framework.core.graph import FrameworkGraph
 from framework.core.registries import register_solver
 from framework.core.solver import MaximumIndependentSet, Solution
 from framework.solvers.kamis.config import time_limit
@@ -20,15 +19,12 @@ def kamis_solver(file: str, name: str, description: str):
             return description
 
         @normalize_labels(start_index=1)
-        def solve(self, graph: FrameworkGraph) -> Solution:
+        def solve(self, graph: nx.Graph) -> Solution:
             with tempfile.NamedTemporaryFile(delete=False) as input_file:
-                graph_object = graph.graph_object
                 with open(input_file.name, "w") as f:
-                    f.write(
-                        f"{graph_object.number_of_nodes()} {graph_object.number_of_edges()}\n"
-                    )
-                    dict = nx.to_dict_of_lists(graph_object)
-                    for i in range(graph_object.number_of_nodes()):
+                    f.write(f"{graph.number_of_nodes()} {graph.number_of_edges()}\n")
+                    dict = nx.to_dict_of_lists(graph)
+                    for i in range(graph.number_of_nodes()):
                         neighbors = sorted(dict.get(i + 1, []), key=int)
                         neighbors = [str(neighbor) for neighbor in neighbors]
                         f.write(" ".join(neighbors) + "\n")

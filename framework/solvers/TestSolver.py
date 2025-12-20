@@ -1,6 +1,7 @@
 import random
 
-from framework.core.graph import FrameworkGraph
+import networkx as nx
+
 from framework.core.solver import MaximumIndependentSet
 from framework.solvers.NoTimeSolverWrapper import solver_from_no_time_solver
 
@@ -9,14 +10,14 @@ class TestGraphSolver:
     def description(self) -> str:
         return "A test solver that randomly selects nodes to form a maximum independent set."
 
-    def solve(self, graph: FrameworkGraph) -> MaximumIndependentSet:
-        valid_nodes = set(graph.graph_object)
+    def solve(self, graph: nx.Graph) -> MaximumIndependentSet:
+        valid_nodes = set(graph)
         response = MaximumIndependentSet([])
         while valid_nodes:
             node = random.choice(list(valid_nodes))
             valid_nodes.remove(node)
             response.append(str(node))
-            neighbors = set(graph.graph_object.neighbors(node))
+            neighbors = set(graph.neighbors(node))
             valid_nodes -= neighbors
         return response
 
