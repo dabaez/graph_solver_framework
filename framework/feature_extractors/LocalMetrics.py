@@ -104,7 +104,10 @@ class NodeDegree:
         return "Node Degree"
 
     def extract_features(self, graph: nx.Graph) -> list[float]:
-        return [d for n, d in graph.degree()]
+        degrees = graph.degree
+        if isinstance(degrees, int):
+            return [degrees]
+        return [d for n, d in degrees]
 
 
 NodeDegreeFeatureExtractor = statistical_measures_from_list(NodeDegree())

@@ -1,4 +1,4 @@
-from typing import Any, Protocol
+from typing import Any, Iterator, Protocol
 
 import networkx as nx
 
@@ -65,7 +65,7 @@ class Dataset(Protocol):
         """Returns the number of FrameworkGraphs in the dataset."""
         ...
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[FrameworkGraph]:
         """Returns an iterator over the FrameworkGraphs in the dataset."""
         ...
 

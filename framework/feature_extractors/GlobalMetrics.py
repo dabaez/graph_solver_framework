@@ -62,8 +62,8 @@ class ChromaticNumber:
         return [
             Feature(
                 name="chromatic_number",
-                value=chromatic_number / graph.graph_object.number_of_nodes()
-                if graph.graph_object.number_of_nodes() > 0
+                value=chromatic_number / graph.number_of_nodes()
+                if graph.number_of_nodes() > 0
                 else 0,
             )
         ]

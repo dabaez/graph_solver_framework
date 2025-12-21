@@ -41,10 +41,10 @@ class SQLiteGraphLoader:
 
 
 def create_sqlite_graph(
-    cls, id: int, conn: sqlite3.Connection, features: dict[str, Any]
+    id: int, conn: sqlite3.Connection, features: dict[str, Any]
 ) -> FrameworkGraph:
     loader = SQLiteGraphLoader(id, conn)
-    return cls(id=id, features=features, loader=loader)
+    return FrameworkGraph(id=id, features=features, loader=loader)
 
 
 class SQLiteWriter:
@@ -98,7 +98,7 @@ class SQLiteDataset:
         for row in rows:
             id = row[0]
             features = json.loads(row[1]) if row[1] else {}
-            graph = FrameworkGraph.from_sqlite(id, self.conn, features)
+            graph = create_sqlite_graph(id, self.conn, features)
             graphs.append(graph)
         return graphs
 
@@ -120,7 +120,7 @@ class SQLiteDataset:
             (features, graph_data),
         )
         new_graph_id = response.fetchone()[0]
-        new_graph = FrameworkGraph.from_sqlite(new_graph_id, self.conn, graph.features)
+        new_graph = create_sqlite_graph(new_graph_id, self.conn, graph.features)
         self.graphs.append(new_graph)
 
     def extend(self, graphs: list[FrameworkGraph]) -> None:

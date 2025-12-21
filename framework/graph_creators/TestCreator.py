@@ -19,7 +19,7 @@ class TestDatasetCreator:
             return False
         return True
 
-    def create_dataset(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
+    def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         G = nx.Graph()
         G.add_nodes_from(["A", "B", "C", "D", "E"])
         G.add_edges_from(

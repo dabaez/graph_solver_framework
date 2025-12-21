@@ -7,9 +7,8 @@ from pathlib import Path
 import networkx as nx
 
 from framework.core.registries import register_solver
-from framework.core.solver import MaximumIndependentSet, Solution
 from framework.solvers.kamis.config import time_limit
-from framework.solvers.NodeMappingDecorator import normalize_labels
+from framework.solvers.NodeMappingDecorator import IntSolution, normalize_labels
 
 
 def kamis_solver(file: str, name: str, description: str):
@@ -19,7 +18,7 @@ def kamis_solver(file: str, name: str, description: str):
             return description
 
         @normalize_labels(start_index=1)
-        def solve(self, graph: nx.Graph) -> Solution:
+        def solve(self, graph: nx.Graph) -> IntSolution:
             with tempfile.NamedTemporaryFile(delete=False) as input_file:
                 with open(input_file.name, "w") as f:
                     f.write(f"{graph.number_of_nodes()} {graph.number_of_edges()}\n")
@@ -52,9 +51,7 @@ def kamis_solver(file: str, name: str, description: str):
             os.remove(input_file_path)
             os.remove(output_file_path)
 
-            return Solution(
-                mis=MaximumIndependentSet(mis_list), time=end_time - start_time
-            )
+            return IntSolution(mis=mis_list, time=end_time - start_time)
 
     return KamisSolver
 

@@ -24,7 +24,8 @@ from .utils import _load_model
 def convert_dataset_to_pyg(dataset: Dataset) -> list[Data]:
     pyg_dataset = []
     for graph in dataset:
-        G = graph.graph_object.copy()
+        with graph as graph_data:
+            G = graph_data.copy()
         pyg_data = from_networkx(G)
 
         if "labels" not in graph.features:

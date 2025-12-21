@@ -32,7 +32,6 @@ class SATtoMISLoader:
 
     def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         folder_path = parameters["folder path"]
-        dataset: Dataset = Dataset([])
 
         for filename in os.listdir(folder_path):
             if filename.endswith(".cnf"):
