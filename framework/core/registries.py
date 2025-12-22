@@ -4,12 +4,12 @@ from framework.core.feature_extractor import FeatureExtractor
 from framework.core.graph_creator import GraphCreator
 from framework.core.solver import Solver
 
-DATASET_CREATORS: dict[str, Type[GraphCreator]] = {}
+GRAPH_CREATORS: dict[str, Type[GraphCreator]] = {}
 SOLVERS: dict[str, Type[Solver]] = {}
 FEATURE_EXTRACTORS: dict[str, Type[FeatureExtractor]] = {}
 
 
-def register_dataset_creator(
+def register_graph_creator(
     name: str,
 ) -> Callable[[Type[GraphCreator]], Type[GraphCreator]]:
     """
@@ -20,11 +20,11 @@ def register_dataset_creator(
     """
 
     def decorator(creator: Type[GraphCreator]) -> Type[GraphCreator]:
-        if name in DATASET_CREATORS:
+        if name in GRAPH_CREATORS:
             raise ValueError(
                 f"Dataset creator with name '{name}' is already registered."
             )
-        DATASET_CREATORS[name] = creator
+        GRAPH_CREATORS[name] = creator
         return creator
 
     return decorator

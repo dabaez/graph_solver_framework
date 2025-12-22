@@ -1,4 +1,5 @@
-from typing import Any, Iterator, Protocol
+from dataclasses import dataclass
+from typing import Any, Callable, Iterator, Literal, Protocol, TypeVar
 
 import networkx as nx
 
@@ -31,29 +32,62 @@ class FrameworkGraph:
 
     def add_feature(
         self, feature_name: str, feature_value: Any, overwrite: bool = True
-    ) -> None:
+    ) -> bool:
         """Adds a feature to the graph.
 
         :param feature_name: Name of the feature.
         :param feature_value: Value of the feature.
         :param overwrite: If True, overwrites the feature if it already exists.
+
+        :return: True if the feature was added or updated, False otherwise.
         """
-        if overwrite or feature_name not in self.features:
+        if (feature_name not in self.features) or (
+            self.features[feature_name] != feature_value and overwrite
+        ):
             self.features[feature_name] = feature_value
+            return True
+        return False
 
 
-class Writer(Protocol):
-    def update(self, graph: FrameworkGraph) -> None:
-        """Updates the given FrameworkGraph in the storage."""
-        ...
+@dataclass
+class Update:
+    update_type: Literal["add", "feature_update"]
+    graph: FrameworkGraph
 
-    def __enter__(self) -> "Writer":
-        """Enters the context for writing."""
-        ...
+
+class BatchWriter:
+    def __init__(
+        self, save_callback: Callable[[list[Update]], None], batch_size: int = 1000
+    ):
+        self.save_callback = save_callback
+        self.batch_size = batch_size
+        self.updates: list[Update] = []
+
+    def add(self, graph: FrameworkGraph) -> None:
+        self.updates.append(Update(update_type="add", graph=graph))
+        self._check_flush()
+
+    def update_features(self, graph: FrameworkGraph) -> None:
+        self.updates.append(Update(update_type="feature_update", graph=graph))
+        self._check_flush()
+
+    def _check_flush(self) -> None:
+        if len(self.updates) >= self.batch_size:
+            self._flush()
+
+    def _flush(self) -> None:
+        if self.updates:
+            self.save_callback(self.updates)
+            self.updates = []
+
+    def __enter__(self) -> "BatchWriter":
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:
-        """Exits the context for writing."""
-        ...
+        self._flush()
+
+
+D = TypeVar("D", bound="Dataset")
 
 
 class Dataset(Protocol):
@@ -69,14 +103,6 @@ class Dataset(Protocol):
         """Returns an iterator over the FrameworkGraphs in the dataset."""
         ...
 
-    def append(self, graph: FrameworkGraph) -> None:
-        """Appends a FrameworkGraph to the dataset."""
-        ...
-
-    def extend(self, graphs: list[FrameworkGraph]) -> None:
-        """Extends the dataset with a list of FrameworkGraphs."""
-        ...
-
-    def writer(self) -> Writer:
+    def writer(self, batch_size: int = 1000) -> BatchWriter:
         """Returns a Writer for updating graphs in the dataset."""
         ...

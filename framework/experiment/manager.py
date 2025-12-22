@@ -4,12 +4,12 @@ import numpy as np
 import questionary
 from tqdm import tqdm
 
-import framework.dataset_creators  # noqa: F401
 import framework.feature_extractors  # noqa: F401
+import framework.graph_creators  # noqa: F401
 import framework.solvers  # noqa: F401
 from framework.core.registries import (
-    DATASET_CREATORS,
     FEATURE_EXTRACTORS,
+    GRAPH_CREATORS,
     SOLVERS,
 )
 
@@ -21,16 +21,16 @@ from .utils import (
     create_folder_if_not_exists,
     dataset_exists,
     delete_dataset,
+    extend_dataset,
+    get_valid_dataset_name_from_user,
     list_datasets,
-    list_registered_dataset_creators,
     list_registered_dataset_feature_extractors,
     list_registered_dataset_solvers,
+    list_registered_graph_creators,
     load_dataset,
     merge_datasets,
     plot_feature_correlation_matrix,
     rename_dataset,
-    save_dataset,
-    save_dataset_with_name,
     save_solver_solution,
 )
 
@@ -137,6 +137,7 @@ def explore_dataset(dataset_name: str):
         choices=[
             "Explore graphs in this dataset",
             "Rename this dataset",
+            "Extend with other datasets",
             "Delete this dataset",
             "Get feature correlation matrix",
             "Go back",
@@ -162,25 +163,27 @@ def explore_dataset(dataset_name: str):
                     "Do you want to see the graph representation?", default=False
                 ).ask()
                 if graph_representation:
-                    print(graph.graph_object.edges())
+                    with graph as g:
+                        print(g.edges())
             except (ValueError, IndexError):
                 print("Invalid graph index. Please try again.")
     elif chosen_option == "Rename this dataset":
-        while True:
-            new_name = questionary.text(
-                "Enter a new name for the dataset (or leave empty to go back):"
-            ).ask()
-            if not new_name:
-                return
-            if dataset_exists(new_name):
-                print(
-                    f"Dataset '{new_name}' already exists. Please choose a different name."
-                )
-            else:
-                break
-        rename_dataset(dataset_name, new_name)
-        print(f"Dataset renamed to '{new_name}'.")
-        explore_dataset(new_name)
+        new_name = get_valid_dataset_name_from_user()
+        if new_name:
+            rename_dataset(dataset_name, new_name)
+            print(f"Dataset renamed to '{new_name}'.")
+            explore_dataset(new_name)
+    elif chosen_option == "Extend with other datasets":
+        available_datasets = [d for d in list_datasets() if d != dataset_name]
+        datasets_to_extend = questionary.checkbox(
+            "Select datasets to extend with:", choices=available_datasets + ["Go back"]
+        ).ask()
+        if "Go back" in datasets_to_extend:
+            return
+        if not datasets_to_extend:
+            print("No datasets selected for extension.")
+            return
+        extend_dataset(dataset, datasets_to_extend)
     elif chosen_option == "Delete this dataset":
         if questionary.confirm(
             f"Are you sure you want to delete the dataset '{dataset_name}'?"
@@ -221,25 +224,25 @@ def explore_dataset(dataset_name: str):
         print(f"Feature correlation matrix saved as '{filename}'.")
 
 
-def explore_dataset_creators():
-    creators = list_registered_dataset_creators()
+def explore_graph_creators():
+    creators = list_registered_graph_creators()
     if not creators:
-        print("No dataset creators available.")
+        print("No graph creators available.")
         return
-    chosen_dataset_creator = questionary.select(
-        "Choose a dataset creator to explore:", choices=[*creators, "Go back"]
+    chosen_graph_creator = questionary.select(
+        "Choose a graph creator to explore:", choices=[*creators, "Go back"]
     ).ask()
-    if chosen_dataset_creator == "Go back":
+    if chosen_graph_creator == "Go back":
         return
-    explore_dataset_creator(chosen_dataset_creator)
+    explore_graph_creator(chosen_graph_creator)
 
 
-def explore_dataset_creator(dataset_creator_name: str):
-    creator_class = DATASET_CREATORS.get(dataset_creator_name)
+def explore_graph_creator(graph_creator_name: str):
+    creator_class = GRAPH_CREATORS.get(graph_creator_name)
     if not creator_class:
-        print(f"Dataset creator '{dataset_creator_name}' not found.")
+        print(f"Graph creator '{graph_creator_name}' not found.")
         return
-    print(f"Dataset Creator: {dataset_creator_name}")
+    print(f"Graph Creator: {graph_creator_name}")
     creator_instance = creator_class()
     print(f"Description: {creator_instance.description()}")
     required_params = creator_instance.required_parameters()
@@ -248,13 +251,39 @@ def explore_dataset_creator(dataset_creator_name: str):
         for param in required_params:
             print(f"- {param.name}: {param.description}")
     else:
-        print("This dataset creator does not require any parameters.")
+        print("This graph creator does not require any parameters.")
 
-    create_a_dataset = questionary.confirm(
-        "Do you want to create a dataset using this creator?"
+    chosen_option = questionary.select(
+        "Choose an option:",
+        choices=[
+            "Create graphs on a new dataset",
+            "Add graphs to an existing dataset",
+            "Go back",
+        ],
     ).ask()
 
-    if create_a_dataset:
+    if chosen_option == "Create graphs on a new dataset":
+        dataset_name = get_valid_dataset_name_from_user()
+        if not dataset_name:
+            return
+        dataset = load_dataset(dataset_name)
+    elif chosen_option == "Add graphs to an existing dataset":
+        existing_datasets = list_datasets()
+        if not existing_datasets:
+            print("No existing datasets available to add graphs to.")
+            return
+        dataset_name = questionary.select(
+            "Choose an existing dataset to add graphs to:",
+            choices=existing_datasets + ["Go back"],
+        ).ask()
+        if dataset_name == "Go back":
+            return
+        dataset = load_dataset(dataset_name)
+
+    if (
+        chosen_option == "Create graphs on a new dataset"
+        or chosen_option == "Add graphs to an existing dataset"
+    ):
         parameters = {param.name: "" for param in required_params}
         while True:
             for param in required_params:
@@ -269,14 +298,15 @@ def explore_dataset_creator(dataset_creator_name: str):
                 parameters[param.name] = value
 
             if creator_instance.validate_parameters(parameters):
-                dataset = creator_instance.create_dataset(parameters)
-                dataset_file = save_dataset(dataset)
-                print(f"Dataset created and saved as '{dataset_file}'.")
                 break
+
             else:
                 print("Invalid parameters provided.")
                 if not questionary.confirm("Do you want to try again?").ask():
-                    break
+                    return
+
+        creator_instance.create_graphs(parameters=parameters, dataset=dataset)
+        print(f"Graphs created and added to the dataset '{dataset_name}'.")
 
 
 def explore_feature_extractors():
@@ -321,11 +351,18 @@ def explore_feature_extractor(extractor_name: str):
         overwrite__features = questionary.confirm(
             "Some features are already present in the dataset. Do you want to overwrite them? 'Y' for overwrite, 'N' to skip those features."
         ).ask()
-    for graph in tqdm(dataset):
-        calculated_features = extractor_instance.extract_features(graph)
-        for feature in calculated_features:
-            graph.add_feature(feature, overwrite=overwrite__features)
-    save_dataset_with_name(dataset, dataset_name)
+    with dataset.writer() as writer:
+        for graph in tqdm(dataset):
+            with graph as g:
+                calculated_features = extractor_instance.extract_features(g)
+                updated = False
+            for feature in calculated_features:
+                updated_feature = graph.add_feature(
+                    feature.name, feature.value, overwrite=overwrite__features
+                )
+                updated = updated or updated_feature
+            if updated:
+                writer.update_features(graph)
     print(f"Features extracted and added to the dataset '{dataset_name}'.")
 
 
@@ -362,7 +399,8 @@ def explore_solver(solver_name: str):
         return
     solutions = []
     for graph in tqdm(dataset):
-        solutions.append(solver_instance.solve(graph))
+        with graph as g:
+            solutions.append(solver_instance.solve(g))
     solution_file = save_solver_solution(solver_name, solutions, dataset_name)
     print(f"Solutions saved to '{solution_file}'.")
 
@@ -375,7 +413,7 @@ if __name__ == "__main__":
             "Choose an option:",
             choices=[
                 "Explore datasets",
-                "Explore dataset creators",
+                "Explore graph creators",
                 "Explore feature extractors",
                 "Explore solvers",
                 "Exit",
@@ -385,8 +423,8 @@ if __name__ == "__main__":
         match choice:
             case "Explore datasets":
                 explore_datasets()
-            case "Explore dataset creators":
-                explore_dataset_creators()
+            case "Explore graph creators":
+                explore_graph_creators()
             case "Explore feature extractors":
                 explore_feature_extractors()
             case "Explore solvers":

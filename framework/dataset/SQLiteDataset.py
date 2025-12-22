@@ -1,11 +1,11 @@
 import json
 import pickle
 import sqlite3
-from typing import Any
+from typing import Any, Iterator
 
 import networkx as nx
 
-from framework.core.graph import FrameworkGraph, Writer
+from framework.core.graph import BatchWriter, FrameworkGraph, Update
 
 TABLE_NAME = "graphs"
 FEATURES_COLUMN_NAME = "features"
@@ -47,39 +47,6 @@ def create_sqlite_graph(
     return FrameworkGraph(id=id, features=features, loader=loader)
 
 
-class SQLiteWriter:
-    conn: sqlite3.Connection
-    batch_size: int
-    updates: list
-
-    def __init__(self, conn: sqlite3.Connection, batch_size: int = 1000):
-        self.conn = conn
-        self.batch_size = batch_size
-        self.updates = []
-
-    def update(self, graph: FrameworkGraph) -> None:
-        features = json.dumps(graph.features)
-        self.updates.append((features, graph.id))
-        if len(self.updates) >= self.batch_size:
-            self._flush()
-
-    def _flush(self) -> None:
-        cursor = self.conn.cursor()
-        cursor.executemany(
-            f"UPDATE {TABLE_NAME} SET features = ? WHERE {ID_COLUMN_NAME} = ?",
-            self.updates,
-        )
-        self.conn.commit()
-        self.updates = []
-
-    def __enter__(self) -> "SQLiteWriter":
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        if self.updates:
-            self._flush()
-
-
 class SQLiteDataset:
     conn: sqlite3.Connection
     graphs: list[FrameworkGraph]
@@ -88,7 +55,21 @@ class SQLiteDataset:
     def __init__(self, conn: sqlite3.Connection, writer_batch_size: int = 1000):
         self.conn = conn
         self.writer_batch_size = writer_batch_size
+        self.ensure_table_exists()
         self.graphs = self.load_graphs()
+
+    def ensure_table_exists(self) -> None:
+        cursor = self.conn.cursor()
+        cursor.execute(
+            f"""
+            CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+                {ID_COLUMN_NAME} INTEGER PRIMARY KEY,
+                {FEATURES_COLUMN_NAME} TEXT,
+                {GRAPH_DATA_COLUMN_NAME} BLOB
+            )
+            """
+        )
+        self.conn.commit()
 
     def load_graphs(self) -> list[FrameworkGraph]:
         cursor = self.conn.cursor()
@@ -108,24 +89,46 @@ class SQLiteDataset:
     def __len__(self) -> int:
         return len(self.graphs)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[FrameworkGraph]:
         return iter(self.graphs)
 
-    def append(self, graph: FrameworkGraph) -> None:
-        cursor = self.conn.cursor()
-        features = json.dumps(graph.features)
-        graph_data = pickle.dumps(nx.Graph())
-        response = cursor.execute(
-            f"INSERT INTO {TABLE_NAME} (features, {GRAPH_DATA_COLUMN_NAME}) VALUES (?, ?) RETURNING {ID_COLUMN_NAME}",
-            (features, graph_data),
+    def writer(self, batch_size: int = 1000) -> BatchWriter:
+        return BatchWriter(
+            save_callback=self._batch_save_callback, batch_size=batch_size
         )
-        new_graph_id = response.fetchone()[0]
-        new_graph = create_sqlite_graph(new_graph_id, self.conn, graph.features)
-        self.graphs.append(new_graph)
 
-    def extend(self, graphs: list[FrameworkGraph]) -> None:
-        for graph in graphs:
-            self.append(graph)
+    def _batch_save_callback(self, updates: list[Update]) -> None:
+        cursor = self.conn.cursor()
 
-    def writer(self) -> Writer:
-        return SQLiteWriter(self.conn, self.writer_batch_size)
+        add_updates = [u for u in updates if u.update_type == "add"]
+        if add_updates:
+            add_values = []
+            for update in add_updates:
+                features = json.dumps(update.graph.features)
+                with update.graph as g:
+                    graph_data = pickle.dumps(g)
+                add_values.append((features, graph_data))
+            cursor.executemany(
+                f"INSERT INTO {TABLE_NAME} (features, {GRAPH_DATA_COLUMN_NAME}) VALUES (?, ?)",
+                add_values,
+            )
+
+        feature_updates = [u for u in updates if u.update_type == "feature_update"]
+        if feature_updates:
+            feature_values = []
+            for update in feature_updates:
+                features = json.dumps(update.graph.features)
+                feature_values.append((features, update.graph.id))
+            cursor.executemany(
+                f"UPDATE {TABLE_NAME} SET {FEATURES_COLUMN_NAME} = ? WHERE {ID_COLUMN_NAME} = ?",
+                feature_values,
+            )
+
+        self.conn.commit()
+
+    @classmethod
+    def from_file(
+        cls, file_path: str, writer_batch_size: int = 1000
+    ) -> "SQLiteDataset":
+        conn = sqlite3.connect(file_path)
+        return cls(conn, writer_batch_size)

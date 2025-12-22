@@ -2,11 +2,11 @@ import networkx as nx
 
 from framework.core.graph import Dataset
 from framework.core.graph_creator import RequiredParameter
-from framework.core.registries import register_dataset_creator
+from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_dataset_creator("BarabasiAlbertGenerator")
+@register_graph_creator("BarabasiAlbertGenerator")
 class BarabasiAlbertGenerator:
     def description(self) -> str:
         return "Generates Barabasi-Albert graphs with specified parameters."
@@ -73,10 +73,11 @@ class BarabasiAlbertGenerator:
 
     def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         min_n, max_n, min_m, max_m, step_n, step_m = self.parse_parameters(parameters)
-        for n in range(min_n, max_n + 1, step_n):
-            for m in range(min_m, max_m + 1, step_m):
-                if 1 <= m < n:
-                    G = nx.barabasi_albert_graph(n, m)
-                    graph = create_in_memory_graph(G)
-                    dataset.append(graph)
+        with dataset.writer() as writer:
+            for n in range(min_n, max_n + 1, step_n):
+                for m in range(min_m, max_m + 1, step_m):
+                    if 1 <= m < n:
+                        G = nx.barabasi_albert_graph(n, m)
+                        graph = create_in_memory_graph(G)
+                        writer.add(graph)
         return dataset

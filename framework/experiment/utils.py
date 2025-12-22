@@ -1,17 +1,18 @@
 import csv
 import os
-import pickle
 
 import matplotlib.pyplot as plt
 import numpy as np
+import questionary
 from scipy.stats import pearsonr
 
 from framework.core.graph import Dataset
 from framework.core.registries import (
-    DATASET_CREATORS,
     FEATURE_EXTRACTORS,
+    GRAPH_CREATORS,
     SOLVERS,
 )
+from framework.dataset.SQLiteDataset import SQLiteDataset
 
 from ..core.solver import Solution
 from .config import DATASETS_FOLDER, SOLUTIONS_FOLDER
@@ -19,9 +20,9 @@ from .config import DATASETS_FOLDER, SOLUTIONS_FOLDER
 ##### REGISTRIES #####
 
 
-def list_registered_dataset_creators():
-    """List all registered dataset creators."""
-    return list(DATASET_CREATORS.keys())
+def list_registered_graph_creators():
+    """List all registered graph creators."""
+    return list(GRAPH_CREATORS.keys())
 
 
 def list_registered_dataset_solvers():
@@ -40,32 +41,14 @@ def list_registered_dataset_feature_extractors():
 def list_datasets() -> list[str]:
     datatsets = []
     for file in os.listdir(DATASETS_FOLDER):
-        if file.endswith(".pkl"):
-            datatsets.append(file[:-4])
+        if file.endswith(".db"):
+            datatsets.append(file[:-3])
     return datatsets
 
 
 def load_dataset(dataset_name: str) -> Dataset:
-    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.pkl")
-    with open(file_path, "rb") as file:
-        return pickle.load(file)
-
-
-def save_dataset(dataset: Dataset) -> str:
-    """Save a dataset to the datasets folder."""
-    file_name = f"dataset_{len(list_datasets())}.pkl"
-    file_path = os.path.join(DATASETS_FOLDER, file_name)
-    with open(file_path, "wb") as file:
-        pickle.dump(dataset, file)
-    return file_name[:-4]
-
-
-def save_dataset_with_name(dataset: Dataset, dataset_name: str) -> str:
-    """Save a dataset to the datasets folder with a specific name."""
-    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.pkl")
-    with open(file_path, "wb") as file:
-        pickle.dump(dataset, file)
-    return dataset_name
+    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.db")
+    return SQLiteDataset.from_file(file_path=file_path)
 
 
 def CalculatedFeaturesFromDataset(dataset: Dataset) -> dict[str, int]:
@@ -96,31 +79,38 @@ def fully_calculated_features(dataset: Dataset) -> list[str]:
 
 def dataset_exists(dataset_name: str) -> bool:
     """Check if a dataset exists in the datasets folder."""
-    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.pkl")
+    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.db")
     return os.path.exists(file_path)
+
+
+def extend_dataset(dataset: Dataset, additional_datasets: list[str]) -> None:
+    """Extend a dataset with additional datasets."""
+    with dataset.writer() as writer:
+        for name in additional_datasets:
+            additional_dataset = load_dataset(name)
+            for graph in additional_dataset:
+                writer.add(graph)
 
 
 def merge_datasets(dataset_names: list[str], new_dataset_name: str) -> Dataset:
     """Merge multiple datasets into a new dataset."""
-    merged_dataset = Dataset([])
-    for name in dataset_names:
-        dataset = load_dataset(name)
-        merged_dataset.extend(dataset)
-
-    save_dataset_with_name(merged_dataset, new_dataset_name)
+    merged_dataset = SQLiteDataset.from_file(
+        file_path=os.path.join(DATASETS_FOLDER, f"{new_dataset_name}.db")
+    )
+    extend_dataset(merged_dataset, dataset_names)
     return merged_dataset
 
 
 def delete_dataset(dataset_name: str) -> None:
     """Delete a dataset from the datasets folder."""
-    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.pkl")
+    file_path = os.path.join(DATASETS_FOLDER, f"{dataset_name}.db")
     os.remove(file_path)
 
 
 def rename_dataset(old_name: str, new_name: str) -> None:
     """Rename a dataset in the datasets folder."""
-    old_path = os.path.join(DATASETS_FOLDER, f"{old_name}.pkl")
-    new_path = os.path.join(DATASETS_FOLDER, f"{new_name}.pkl")
+    old_path = os.path.join(DATASETS_FOLDER, f"{old_name}.db")
+    new_path = os.path.join(DATASETS_FOLDER, f"{new_name}.db")
     os.rename(old_path, new_path)
 
 
@@ -169,6 +159,23 @@ def plot_feature_correlation_matrix(
     plt.tight_layout()
     plt.savefig(pathname)
     plt.close()
+
+
+def get_valid_dataset_name_from_user() -> str | None:
+    """Prompt the user to enter a valid dataset name."""
+
+    while True:
+        new_name = questionary.text(
+            "Enter a name for the dataset (or leave empty to go back):"
+        ).ask()
+        if not new_name:
+            return None
+        if dataset_exists(new_name):
+            print(
+                f"Dataset '{new_name}' already exists. Please choose a different name."
+            )
+        else:
+            return new_name
 
 
 ##### SOLVERS #####

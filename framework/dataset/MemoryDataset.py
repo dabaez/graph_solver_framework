@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Iterator
 
 import networkx as nx
 
-from framework.core.graph import FrameworkGraph, Writer
+from framework.core.graph import BatchWriter, Dataset, FrameworkGraph, Update
 
 
 class InMemoryGraphLoader:
@@ -27,17 +27,6 @@ def create_in_memory_graph(
     return FrameworkGraph(id=-1, features=features, loader=loader)
 
 
-class MemoryWriter:
-    def update(self, graph: FrameworkGraph) -> None:
-        pass
-
-    def __enter__(self) -> "MemoryWriter":
-        return self
-
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
-        pass
-
-
 class MemoryDataset:
     _graphs: list[FrameworkGraph]
 
@@ -50,14 +39,25 @@ class MemoryDataset:
     def __len__(self) -> int:
         return len(self._graphs)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[FrameworkGraph]:
         return iter(self._graphs)
 
     def append(self, graph: FrameworkGraph) -> None:
-        self._graphs.append(graph)
+        features = graph.features.copy()
+        with graph as g:
+            new_graph = create_in_memory_graph(g, features)
+        self._graphs.append(new_graph)
 
-    def extend(self, graphs: list[FrameworkGraph]) -> None:
-        self._graphs.extend(graphs)
+    def extend(self, dataset: Dataset) -> None:
+        for graph in dataset:
+            self.append(graph)
 
-    def writer(self) -> Writer:
-        return MemoryWriter()
+    def writer(self, batch_size: int = 1000) -> BatchWriter:
+        return BatchWriter(
+            save_callback=self._batch_save_callback, batch_size=batch_size
+        )
+
+    def _batch_save_callback(self, updates: list[Update]) -> None:
+        for update in updates:
+            if update.update_type == "add":
+                self.append(update.graph)

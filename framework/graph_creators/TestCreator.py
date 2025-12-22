@@ -2,14 +2,14 @@ import networkx as nx
 
 from framework.core.graph import Dataset
 from framework.core.graph_creator import RequiredParameter
-from framework.core.registries import register_dataset_creator
+from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_dataset_creator("test_creator")
-class TestDatasetCreator:
+@register_graph_creator("test_creator")
+class TestGraphCreator:
     def description(self) -> str:
-        return "A test dataset creator that generates a simple graph."
+        return "A test graph creator that generates a simple graph."
 
     def required_parameters(self) -> list[RequiredParameter]:
         return []
@@ -33,5 +33,6 @@ class TestDatasetCreator:
                 ("C", "D"),
             ]
         )
-        dataset.append(create_in_memory_graph(G))
+        with dataset.writer() as writer:
+            writer.add(create_in_memory_graph(G))
         return dataset

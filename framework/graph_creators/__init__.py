@@ -1,4 +1,4 @@
 from .BarabasiAlbertGenerator import BarabasiAlbertGenerator
 from .DIMACStoMISLoader import DIMACStoMISLoader
 from .SATtoMISLoader import SATtoMISLoader
-from .TestCreator import TestDatasetCreator
+from .TestCreator import TestGraphCreator

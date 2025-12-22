@@ -4,11 +4,11 @@ import networkx as nx
 
 from framework.core.graph import Dataset
 from framework.core.graph_creator import RequiredParameter
-from framework.core.registries import register_dataset_creator
+from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_dataset_creator("DIMACStoMISLoader")
+@register_graph_creator("DIMACStoMISLoader")
 class DIMACStoMISLoader:
     def description(self) -> str:
         return "Loads a dataset of DIMACS Maximum Clique instances and converts them to Maximum Independent Set (MIS) instances."
@@ -31,14 +31,15 @@ class DIMACStoMISLoader:
     def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
         folder_path = parameters["folder path"]
 
-        for filename in os.listdir(folder_path):
-            if filename.endswith(".clq"):
-                file_path = os.path.join(folder_path, filename)
-                graph = self.convert_clique_to_mis(file_path)
-                framework_graph = create_in_memory_graph(
-                    graph, {"source_file": filename}
-                )
-                dataset.append(framework_graph)
+        with dataset.writer() as writer:
+            for filename in os.listdir(folder_path):
+                if filename.endswith(".clq"):
+                    file_path = os.path.join(folder_path, filename)
+                    graph = self.convert_clique_to_mis(file_path)
+                    framework_graph = create_in_memory_graph(
+                        graph, {"source_file": filename}
+                    )
+                    writer.add(framework_graph)
 
         return dataset
 
