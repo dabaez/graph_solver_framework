@@ -21,7 +21,7 @@ from .utils import (
     create_folder_if_not_exists,
     dataset_exists,
     delete_dataset,
-    extend_dataset,
+    extend_dataset_with_path,
     get_valid_dataset_name_from_user,
     list_datasets,
     list_registered_dataset_feature_extractors,
@@ -183,7 +183,7 @@ def explore_dataset(dataset_name: str):
         if not datasets_to_extend:
             print("No datasets selected for extension.")
             return
-        extend_dataset(dataset, datasets_to_extend)
+        extend_dataset_with_path(dataset, datasets_to_extend)
     elif chosen_option == "Delete this dataset":
         if questionary.confirm(
             f"Are you sure you want to delete the dataset '{dataset_name}'?"

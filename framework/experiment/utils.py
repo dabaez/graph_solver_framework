@@ -83,13 +83,18 @@ def dataset_exists(dataset_name: str) -> bool:
     return os.path.exists(file_path)
 
 
-def extend_dataset(dataset: Dataset, additional_datasets: list[str]) -> None:
-    """Extend a dataset with additional datasets."""
+def extend_dataset(dataset: Dataset, dataset_from: Dataset) -> None:
+    """Extend a dataset with another dataset."""
     with dataset.writer() as writer:
-        for name in additional_datasets:
-            additional_dataset = load_dataset(name)
-            for graph in additional_dataset:
-                writer.add(graph)
+        for graph in dataset_from:
+            writer.add(graph)
+
+
+def extend_dataset_with_path(dataset: Dataset, additional_datasets: list[str]) -> None:
+    """Extend a dataset with additional datasets."""
+    for name in additional_datasets:
+        additional_dataset = load_dataset(name)
+        extend_dataset(dataset, additional_dataset)
 
 
 def merge_datasets(dataset_names: list[str], new_dataset_name: str) -> Dataset:
@@ -97,7 +102,7 @@ def merge_datasets(dataset_names: list[str], new_dataset_name: str) -> Dataset:
     merged_dataset = SQLiteDataset.from_file(
         file_path=os.path.join(DATASETS_FOLDER, f"{new_dataset_name}.db")
     )
-    extend_dataset(merged_dataset, dataset_names)
+    extend_dataset_with_path(merged_dataset, dataset_names)
     return merged_dataset
 
 

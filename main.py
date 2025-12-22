@@ -6,18 +6,17 @@ import questionary
 import yaml
 from tqdm import tqdm
 
-import framework.dataset_creators  # noqa: F401
 import framework.feature_extractors  # noqa: F401
+import framework.graph_creators  # noqa: F401
 import framework.solvers  # noqa: F401
-from framework.core.graph import Dataset
-from framework.core.registries import DATASET_CREATORS, FEATURE_EXTRACTORS, SOLVERS
+from framework.core.registries import FEATURE_EXTRACTORS, GRAPH_CREATORS, SOLVERS
+from framework.dataset.SQLiteDataset import SQLiteDataset
 from framework.experiment.analyzer import analyzer
 from framework.experiment.config import SOLUTIONS_FOLDER
 from framework.experiment.utils import (
+    extend_dataset_with_path,
     fully_calculated_features,
     load_dataset,
-    save_dataset,
-    save_dataset_with_name,
     save_solver_solution,
 )
 
@@ -52,40 +51,45 @@ def solution_exists(solver_name: str, dataset_name: str) -> bool:
 
 def main(config_path: Path):
     config = load_config(config_path)
+    config_filename = os.path.basename(config_path)[:-5]
+
     validate_config(config)
 
     if len(config["datasets"]) == 1 and config["datasets"][0]["type"] == "loaded":
         dataset_name = config["datasets"][0]["name"]
-        if dataset_name.endswith(".pkl"):
-            dataset_name = dataset_name[:-4]
+        if dataset_name.endswith(".db"):
+            dataset_name = dataset_name[:-3]
         dataset = load_dataset(dataset_name)
         print(f"Loaded dataset {dataset_name} with {len(dataset)} graphs.")
     else:
-        dataset = Dataset([])
-        print("Loading datasets...")
-        for dataset_cfg in tqdm(config["datasets"]):
-            if dataset_cfg["type"] == "loaded":
-                if dataset_cfg["name"].endswith(".pkl"):
-                    dataset_cfg["name"] = dataset_cfg["name"][:-4]
-                loaded_dataset = load_dataset(dataset_cfg["name"])
-                dataset.extend(loaded_dataset)
-            else:
-                creator_fn = DATASET_CREATORS.get(dataset_cfg["generator"])
-                creator_instance = creator_fn()
-                generated_dataset = creator_instance.create_dataset(
-                    dataset_cfg.get("parameters", {})
-                )
-                dataset.extend(generated_dataset)
+        dataset_name = config_filename + ".db"
+        dataset = SQLiteDataset.from_file(dataset_name)
+        if len(dataset) > 0:
+            print(
+                f"Dataset {dataset_name} already exists with {len(dataset)} graphs. Skipping creation."
+            )
+        else:
+            print("Loading datasets...")
+            for dataset_cfg in tqdm(config["datasets"]):
+                if dataset_cfg["type"] == "loaded":
+                    if dataset_cfg["name"].endswith(".db"):
+                        dataset_cfg["name"] = dataset_cfg["name"][:-3]
+                    extend_dataset_with_path(dataset, [dataset_cfg["name"]])
+                else:
+                    creator_fn = GRAPH_CREATORS[dataset_cfg["generator"]]
+                    creator_instance = creator_fn()
+                    creator_instance.create_graphs(
+                        dataset_cfg.get("parameters", {}), dataset
+                    )
 
-        dataset_name = save_dataset(dataset)
-        print(f"Dataset saved as {dataset_name} with {len(dataset)} graphs.")
+            print(f"Dataset saved as {dataset_name} with {len(dataset)} graphs.")
 
     if "feature_extractors" in config:
         print("Calculating features...")
         fcf = fully_calculated_features(dataset)
         for feature_extractor_cfg in config["feature_extractors"]:
             print(f"Calculating features with {feature_extractor_cfg['name']}...")
-            extractor_fn = FEATURE_EXTRACTORS.get(feature_extractor_cfg["name"])
+            extractor_fn = FEATURE_EXTRACTORS[feature_extractor_cfg["name"]]
             extractor_instance = extractor_fn()
 
             if all(
@@ -96,13 +100,20 @@ def main(config_path: Path):
                 )
                 continue
 
-            for graph in tqdm(dataset):
-                calculated_features = extractor_instance.extract_features(graph)
-                for feature in calculated_features:
-                    graph.add_feature(
-                        feature, overwrite=feature_extractor_cfg.get("overwrite", False)
-                    )
-            save_dataset_with_name(dataset, dataset_name)
+            with dataset.writer() as writer:
+                for graph in tqdm(dataset):
+                    with graph as G:
+                        calculated_features = extractor_instance.extract_features(G)
+                    updated_features = False
+                    for feature in calculated_features:
+                        updated = graph.add_feature(
+                            feature.name,
+                            feature.value,
+                            overwrite=feature_extractor_cfg.get("overwrite", False),
+                        )
+                        updated_features = updated_features or updated
+                    if updated_features:
+                        writer.update_features(graph)
 
         print("Feature extraction completed.")
 
@@ -116,11 +127,12 @@ def main(config_path: Path):
             )
             continue
         print(f"Solving with {solver_cfg['name']}...")
-        solver_fn = SOLVERS.get(solver_cfg["name"])
+        solver_fn = SOLVERS[solver_cfg["name"]]
         solver_instance = solver_fn()
         solutions = []
         for graph in tqdm(dataset):
-            solutions.append(solver_instance.solve(graph))
+            with graph as G:
+                solutions.append(solver_instance.solve(G))
         solution_file = save_solver_solution(
             solver_cfg["name"], solutions, dataset_name
         )
@@ -146,4 +158,4 @@ if __name__ == "__main__":
         config = sys.argv[1]
         if not config.endswith(".yaml"):
             config += ".yaml"
-    main(os.path.join(CONFIGS_FOLDER, config))
+    main(Path(os.path.join(CONFIGS_FOLDER, config)))
