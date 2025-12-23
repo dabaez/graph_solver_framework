@@ -191,10 +191,9 @@ def explore_dataset(dataset_name: str):
             delete_dataset(dataset_name)
             print(f"Dataset '{dataset_name}' deleted.")
     elif chosen_option == "Get feature correlation matrix":
-        calculated_features = CalculatedFeaturesFromDataset(dataset)
         chosen_features = questionary.checkbox(
             "Select features to include in the correlation matrix (choose none to go back):",
-            choices=list(calculated_features.keys()),
+            choices=list(fully_calculated_features),
         ).ask()
         if not chosen_features:
             return
@@ -211,7 +210,6 @@ def explore_dataset(dataset_name: str):
                         (chosen_features[i], chosen_features[j], corr_value)
                     )
         top_correlated_pairs.sort(key=lambda x: abs(x[2]), reverse=True)
-        print(top_correlated_pairs)
         print("Top correlated feature pairs:")
         for feature1, feature2, corr_value in top_correlated_pairs[
             : 2 * len(chosen_features)
@@ -346,19 +344,24 @@ def explore_feature_extractor(extractor_name: str):
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
     present_features = CalculatedFeaturesFromDataset(dataset)
-    overwrite__features = True
+    overwrite_features = True
     if any(feature in feature_names for feature in present_features):
-        overwrite__features = questionary.confirm(
+        overwrite_features = questionary.confirm(
             "Some features are already present in the dataset. Do you want to overwrite them? 'Y' for overwrite, 'N' to skip those features."
         ).ask()
     with dataset.writer() as writer:
         for graph in tqdm(dataset):
+            missing_features = [
+                feature for feature in feature_names if feature not in graph.features
+            ]
+            if not missing_features and not overwrite_features:
+                continue
             with graph as g:
                 calculated_features = extractor_instance.extract_features(g)
                 updated = False
             for feature in calculated_features:
                 updated_feature = graph.add_feature(
-                    feature.name, feature.value, overwrite=overwrite__features
+                    feature.name, feature.value, overwrite=overwrite_features
                 )
                 updated = updated or updated_feature
             if updated:

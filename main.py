@@ -15,7 +15,6 @@ from framework.experiment.analyzer import analyzer
 from framework.experiment.config import SOLUTIONS_FOLDER
 from framework.experiment.utils import (
     extend_dataset_with_path,
-    fully_calculated_features,
     load_dataset,
     save_solver_solution,
 )
@@ -38,10 +37,15 @@ def load_config(config_path: Path):
 
 
 def validate_config(config: dict) -> None:
-    required_keys = ["datasets", "solvers", "feature_extractors"]
-    for key in required_keys:
-        if key not in config or not isinstance(config[key], list) or not config[key]:
-            raise ValueError(f"Missing or invalid required key: {key}")
+    if (
+        "datasets" not in config
+        or not isinstance(config["datasets"], list)
+        or not config["datasets"]
+    ):
+        raise ValueError("Missing or invalid required key: datasets")
+
+    if "analyze" in config and "solvers" not in config:
+        raise ValueError("Analyze section found but no solvers defined in config.")
 
 
 def solution_exists(solver_name: str, dataset_name: str) -> bool:
@@ -86,22 +90,22 @@ def main(config_path: Path):
 
     if "feature_extractors" in config:
         print("Calculating features...")
-        fcf = fully_calculated_features(dataset)
         for feature_extractor_cfg in config["feature_extractors"]:
             print(f"Calculating features with {feature_extractor_cfg['name']}...")
             extractor_fn = FEATURE_EXTRACTORS[feature_extractor_cfg["name"]]
             extractor_instance = extractor_fn()
-
-            if all(
-                feature in fcf for feature in extractor_instance.feature_names()
-            ) and not feature_extractor_cfg.get("overwrite", False):
-                print(
-                    f"All features from extractor {feature_extractor_cfg['name']} already calculated for all graphs. Skipping..."
-                )
-                continue
+            feature_names = extractor_instance.feature_names()
+            overwrite_features = feature_extractor_cfg.get("overwrite", False)
 
             with dataset.writer() as writer:
                 for graph in tqdm(dataset):
+                    missing_features = [
+                        feature
+                        for feature in feature_names
+                        if feature not in graph.features
+                    ]
+                    if not missing_features and not overwrite_features:
+                        continue
                     with graph as G:
                         calculated_features = extractor_instance.extract_features(G)
                     updated_features = False
@@ -109,7 +113,7 @@ def main(config_path: Path):
                         updated = graph.add_feature(
                             feature.name,
                             feature.value,
-                            overwrite=feature_extractor_cfg.get("overwrite", False),
+                            overwrite=overwrite_features,
                         )
                         updated_features = updated_features or updated
                     if updated_features:
@@ -117,32 +121,35 @@ def main(config_path: Path):
 
         print("Feature extraction completed.")
 
-    print("Using solvers...")
-    for solver_cfg in config["solvers"]:
-        if not solver_cfg.get("overwrite", False) and solution_exists(
-            solver_cfg["name"], dataset_name
-        ):
-            print(
-                f"Solutions for solver {solver_cfg['name']} on dataset {dataset_name} already exist. Skipping..."
+    if "solvers" in config:
+        print("Using solvers...")
+        for solver_cfg in config["solvers"]:
+            if not solver_cfg.get("overwrite", False) and solution_exists(
+                solver_cfg["name"], dataset_name
+            ):
+                print(
+                    f"Solutions for solver {solver_cfg['name']} on dataset {dataset_name} already exist. Skipping..."
+                )
+                continue
+            print(f"Solving with {solver_cfg['name']}...")
+            solver_fn = SOLVERS[solver_cfg["name"]]
+            solver_instance = solver_fn()
+            solutions = []
+            for graph in tqdm(dataset):
+                with graph as G:
+                    solutions.append(solver_instance.solve(G))
+            solution_file = save_solver_solution(
+                solver_cfg["name"], solutions, dataset_name
             )
-            continue
-        print(f"Solving with {solver_cfg['name']}...")
-        solver_fn = SOLVERS[solver_cfg["name"]]
-        solver_instance = solver_fn()
-        solutions = []
-        for graph in tqdm(dataset):
-            with graph as G:
-                solutions.append(solver_instance.solve(G))
-        solution_file = save_solver_solution(
-            solver_cfg["name"], solutions, dataset_name
-        )
-        print(f"Solutions for solver {solver_cfg['name']} saved to {solution_file}.")
+            print(
+                f"Solutions for solver {solver_cfg['name']} saved to {solution_file}."
+            )
 
-    if "analyze" in config:
-        print("Analyzing results...")
-        chosen_solvers = [solver_cfg["name"] for solver_cfg in config["solvers"]]
-        features = config["analyze"].get("features", [])
-        analyzer(dataset_name, dataset, chosen_solvers, features)
+        if "analyze" in config:
+            print("Analyzing results...")
+            chosen_solvers = [solver_cfg["name"] for solver_cfg in config["solvers"]]
+            features = config["analyze"].get("features", [])
+            analyzer(dataset_name, dataset, chosen_solvers, features)
 
     print("All tasks completed.")
 

@@ -43,7 +43,7 @@ def load_solution(dataset_name: str, solver: str) -> list[SolutionLog]:
                 graph_index=int(row[0]),
                 solution_length=int(row[1]),
                 time_taken=float(row[2]),
-                solution=map(str.strip, row[3].split(",")),
+                solution=list(map(str.strip, row[3].split(","))),
             )
             for row in reader
         ]
@@ -55,7 +55,12 @@ def compare_solutions(sol1: SolutionLog, sol2: SolutionLog) -> int:
     elif sol1.solution_length < sol2.solution_length:
         return 1
     else:
-        return sol1.time_taken - sol2.time_taken
+        if sol1.time_taken < sol2.time_taken:
+            return -1
+        elif sol1.time_taken > sol2.time_taken:
+            return 1
+        else:
+            return 0
 
 
 def analyzer(
