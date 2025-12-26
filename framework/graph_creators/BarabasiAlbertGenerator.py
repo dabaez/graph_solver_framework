@@ -1,3 +1,5 @@
+import random
+
 import networkx as nx
 
 from framework.core.graph import Dataset
@@ -80,4 +82,79 @@ class BarabasiAlbertGenerator:
                         G = nx.barabasi_albert_graph(n, m)
                         graph = create_in_memory_graph(G)
                         writer.add(graph)
+        return dataset
+
+
+@register_graph_creator("BarabasiAlbertRandomParametersGenerator")
+class BarabasiAlbertRandomParametersGenerator:
+    def description(self) -> str:
+        return "Generates Barabasi-Albert graphs with random parameters kept within specified ranges."
+
+    def required_parameters(self) -> list[RequiredParameter]:
+        return [
+            RequiredParameter(
+                name="number_of_graphs",
+                description="Number of graphs to generate.",
+            ),
+            RequiredParameter(
+                name="min_n",
+                description="Minimum number of nodes in the graph.",
+            ),
+            RequiredParameter(
+                name="max_n",
+                description="Maximum number of nodes in the graph.",
+            ),
+            RequiredParameter(
+                name="min_m",
+                description="Minimum number of edges to attach from a new node to existing nodes.",
+            ),
+            RequiredParameter(
+                name="max_m",
+                description="Maximum number of edges to attach from a new node to existing nodes.",
+            ),
+        ]
+
+    def parse_parameters(
+        self, parameters: dict[str, str]
+    ) -> tuple[int, int, int, int, int]:
+        number_of_graphs = int(parameters["number_of_graphs"])
+        min_n = int(parameters["min_n"])
+        max_n = int(parameters["max_n"])
+        min_m = int(parameters["min_m"])
+        max_m = int(parameters["max_m"])
+        return number_of_graphs, min_n, max_n, min_m, max_m
+
+    def validate_parameters(self, parameters: dict[str, str]) -> bool:
+        if (
+            "number_of_graphs" not in parameters
+            or "min_n" not in parameters
+            or "max_n" not in parameters
+            or "min_m" not in parameters
+            or "max_m" not in parameters
+        ):
+            return False
+        try:
+            number_of_graphs, min_n, max_n, min_m, max_m = self.parse_parameters(
+                parameters
+            )
+            if number_of_graphs <= 0:
+                return False
+            if min_n < 0 or max_n < min_n:
+                return False
+            if min_m < 1 or max_m < min_m:
+                return False
+        except ValueError:
+            return False
+        return True
+
+    def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
+        number_of_graphs, min_n, max_n, min_m, max_m = self.parse_parameters(parameters)
+        with dataset.writer() as writer:
+            for _ in range(number_of_graphs):
+                n = random.randint(min_n, max_n)
+                m = random.randint(min_m, max_m)
+                if 1 <= m < n:
+                    G = nx.barabasi_albert_graph(n, m)
+                    graph = create_in_memory_graph(G)
+                    writer.add(graph)
         return dataset

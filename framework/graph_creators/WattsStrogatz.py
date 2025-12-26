@@ -1,3 +1,5 @@
+import random
+
 import networkx as nx
 
 from framework.core.graph import Dataset
@@ -67,6 +69,97 @@ class WattsStrogatzGenerator:
         min_n, max_n, step_n, k, p = self.parse_parameters(parameters)
         with dataset.writer() as writer:
             for n in range(min_n, max_n + 1, step_n):
+                G = nx.watts_strogatz_graph(n, k, p)
+                graph = create_in_memory_graph(G)
+                writer.add(graph)
+        return dataset
+
+
+@register_graph_creator("WattsStrogatzRandomParametersGenerator")
+class WattsStrogatzRandomParametersGenerator:
+    def description(self) -> str:
+        return "Generates Watts-Strogatz graphs with random parameters within specified ranges."
+
+    def required_parameters(self) -> list[RequiredParameter]:
+        return [
+            RequiredParameter(
+                name="number_of_graphs",
+                description="Number of graphs to generate.",
+            ),
+            RequiredParameter(
+                name="min n",
+                description="Minimum number of nodes in the graph.",
+            ),
+            RequiredParameter(
+                name="max n",
+                description="Maximum number of nodes in the graph.",
+            ),
+            RequiredParameter(
+                name="min k",
+                description="Minimum number of nearest neighbors each node is joined with. Must be even and less than n.",
+            ),
+            RequiredParameter(
+                name="max k",
+                description="Maximum number of nearest neighbors each node is joined with. Must be even and less than n.",
+            ),
+            RequiredParameter(
+                name="min p",
+                description="Minimum probability of rewiring each edge.",
+            ),
+            RequiredParameter(
+                name="max p",
+                description="Maximum probability of rewiring each edge.",
+            ),
+        ]
+
+    def parse_parameters(
+        self, parameters: dict[str, str]
+    ) -> tuple[int, int, int, int, int, float, float]:
+        number_of_graphs = int(parameters["number_of_graphs"])
+        min_n = int(parameters["min n"])
+        max_n = int(parameters["max n"])
+        min_k = int(parameters["min k"])
+        max_k = int(parameters["max k"])
+        min_p = float(parameters["min p"])
+        max_p = float(parameters["max p"])
+        return number_of_graphs, min_n, max_n, min_k, max_k, min_p, max_p
+
+    def validate_parameters(self, parameters: dict[str, str]) -> bool:
+        if (
+            "number_of_graphs" not in parameters
+            or "min n" not in parameters
+            or "max n" not in parameters
+            or "min k" not in parameters
+            or "max k" not in parameters
+            or "min p" not in parameters
+            or "max p" not in parameters
+        ):
+            return False
+        try:
+            number_of_graphs, min_n, max_n, min_k, max_k, min_p, max_p = (
+                self.parse_parameters(parameters)
+            )
+            if number_of_graphs <= 0:
+                return False
+            if min_n < 0 or max_n < min_n:
+                return False
+            if min_k < 1 or max_k < min_k or min_k > max_n:
+                return False
+            if min_p < 0 or max_p < min_p or max_p > 1:
+                return False
+        except ValueError:
+            return False
+        return True
+
+    def create_graphs(self, parameters: dict[str, str], dataset: Dataset) -> Dataset:
+        number_of_graphs, min_n, max_n, min_k, max_k, min_p, max_p = (
+            self.parse_parameters(parameters)
+        )
+        with dataset.writer() as writer:
+            for _ in range(number_of_graphs):
+                n = random.randint(min_n, max_n)
+                k = random.randint(min_k, min(max_k, n - 1))
+                p = random.uniform(min_p, max_p)
                 G = nx.watts_strogatz_graph(n, k, p)
                 graph = create_in_memory_graph(G)
                 writer.add(graph)
