@@ -55,9 +55,10 @@ def compare_solutions(sol1: SolutionLog, sol2: SolutionLog) -> int:
     elif sol1.solution_length < sol2.solution_length:
         return 1
     else:
-        if sol1.time_taken < sol2.time_taken:
+        # solutions have the same length, compare by time with 5 seconds tolerance
+        if sol1.time_taken + 5.0 < sol2.time_taken:
             return -1
-        elif sol1.time_taken > sol2.time_taken:
+        elif sol1.time_taken > sol2.time_taken + 5.0:
             return 1
         else:
             return 0
@@ -99,7 +100,8 @@ def analyzer(
         print(f"Best place count: {places.count(1)}")
         print(f"Worst place count: {places.count(len(solvers))}")
 
-        clf = DecisionTreeClassifier()
+        # fit with at most 16 classes to avoid overcomplicating the tree
+        clf = DecisionTreeClassifier(max_leaf_nodes=16)
         clf.fit(X, places)
 
         plt.figure(figsize=(20, 10))
