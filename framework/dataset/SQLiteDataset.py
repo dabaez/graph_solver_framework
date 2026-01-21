@@ -125,6 +125,7 @@ class SQLiteDataset:
             )
 
         self.conn.commit()
+        self.graphs = self.load_graphs()
 
     @classmethod
     def from_file(
