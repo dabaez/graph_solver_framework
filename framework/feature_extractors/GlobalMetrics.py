@@ -120,25 +120,31 @@ class LaplacianEigenvalues:
 
     def extract_features(self, graph: nx.Graph) -> list[Feature]:
         eigenvalues = nx.laplacian_spectrum(graph)
-        ev1 = eigenvalues[-1]
-        ev2 = eigenvalues[-2]
+        n = len(eigenvalues)
+        ev1 = eigenvalues[-1] if n > 0 else 0
+        ev2 = eigenvalues[-2] if n > 1 else 0
 
         avg_degree = (
             sum(dict(graph.degree()).values())  # type: ignore
             / graph.number_of_nodes()
         )
 
+        EPS = 1e-10
+
+        def safe_log10(value: float) -> float:
+            return math.log10(value) if value > EPS else 0.0
+
         log_largest_eigenvalue = Feature(
             name="log_largest_eigenvalue",
-            value=math.log10(ev1 / avg_degree) if avg_degree > 0 else 0,
+            value=safe_log10(ev1 / avg_degree) if avg_degree > 0 else 0,
         )
         log_second_smallest_eigenvalue = Feature(
             name="log_second_smallest_eigenvalue",
-            value=math.log10(ev2 / avg_degree) if avg_degree > 0 else 0,
+            value=safe_log10(ev2 / avg_degree) if avg_degree > 0 else 0,
         )
         log_eigenvalue_ratio = Feature(
             name="log_eigenvalue_ratio",
-            value=math.log10(ev1 / ev2) if ev2 > 0 else 0,
+            value=safe_log10(ev1 / ev2) if ev2 > 0 else 0,
         )
         return [
             log_largest_eigenvalue,
