@@ -7,5 +7,7 @@ from .kamis.main import (
     WeightedBranchAndReduceSolver,
     WeightedLocalSearchSolver,
 )
-from .pyg_treesearch.main import PYGTreeSearchSolver
+
+# from .pyg_treesearch.main import PYGTreeSearchSolver
+from .PuLPSolver import PuLPSolver
 from .TestSolver import TestGraphSolverImplementation
