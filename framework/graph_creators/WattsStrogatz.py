@@ -87,27 +87,27 @@ class WattsStrogatzRandomParametersGenerator:
                 description="Number of graphs to generate.",
             ),
             RequiredParameter(
-                name="min n",
+                name="min_n",
                 description="Minimum number of nodes in the graph.",
             ),
             RequiredParameter(
-                name="max n",
+                name="max_n",
                 description="Maximum number of nodes in the graph.",
             ),
             RequiredParameter(
-                name="min k",
+                name="min_k",
                 description="Minimum number of nearest neighbors each node is joined with. Must be even and less than n.",
             ),
             RequiredParameter(
-                name="max k",
+                name="max_k",
                 description="Maximum number of nearest neighbors each node is joined with. Must be even and less than n.",
             ),
             RequiredParameter(
-                name="min p",
+                name="min_p",
                 description="Minimum probability of rewiring each edge.",
             ),
             RequiredParameter(
-                name="max p",
+                name="max_p",
                 description="Maximum probability of rewiring each edge.",
             ),
         ]
@@ -116,23 +116,23 @@ class WattsStrogatzRandomParametersGenerator:
         self, parameters: dict[str, str]
     ) -> tuple[int, int, int, int, int, float, float]:
         number_of_graphs = int(parameters["number_of_graphs"])
-        min_n = int(parameters["min n"])
-        max_n = int(parameters["max n"])
-        min_k = int(parameters["min k"])
-        max_k = int(parameters["max k"])
-        min_p = float(parameters["min p"])
-        max_p = float(parameters["max p"])
+        min_n = int(parameters["min_n"])
+        max_n = int(parameters["max_n"])
+        min_k = int(parameters["min_k"])
+        max_k = int(parameters["max_k"])
+        min_p = float(parameters["min_p"])
+        max_p = float(parameters["max_p"])
         return number_of_graphs, min_n, max_n, min_k, max_k, min_p, max_p
 
     def validate_parameters(self, parameters: dict[str, str]) -> bool:
         if (
             "number_of_graphs" not in parameters
-            or "min n" not in parameters
-            or "max n" not in parameters
-            or "min k" not in parameters
-            or "max k" not in parameters
-            or "min p" not in parameters
-            or "max p" not in parameters
+            or "min_n" not in parameters
+            or "max_n" not in parameters
+            or "min_k" not in parameters
+            or "max_k" not in parameters
+            or "min_p" not in parameters
+            or "max_p" not in parameters
         ):
             return False
         try:
@@ -158,7 +158,10 @@ class WattsStrogatzRandomParametersGenerator:
         with dataset.writer() as writer:
             for _ in range(number_of_graphs):
                 n = random.randint(min_n, max_n)
-                k = random.randint(min_k, min(max_k, n - 1))
+                if min_k >= n:
+                    k = n - 1
+                else:
+                    k = random.randint(min_k, min(max_k, n - 1))
                 p = random.uniform(min_p, max_p)
                 G = nx.watts_strogatz_graph(n, k, p)
                 graph = create_in_memory_graph(G)
