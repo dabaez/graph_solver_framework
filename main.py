@@ -12,9 +12,10 @@ import framework.solvers  # noqa: F401
 from framework.core.registries import FEATURE_EXTRACTORS, GRAPH_CREATORS, SOLVERS
 from framework.dataset.SQLiteDataset import SQLiteDataset
 from framework.experiment.analyzer import analyzer
-from framework.experiment.config import SOLUTIONS_FOLDER
+from framework.experiment.config import DATASETS_FOLDER, SOLUTIONS_FOLDER
 from framework.experiment.utils import (
     extend_dataset_with_path,
+    list_datasets,
     load_dataset,
     save_solver_solution,
 )
@@ -36,6 +37,29 @@ def load_config(config_path: Path):
     return config
 
 
+def validate_datasets(config: dict) -> None:
+    available_datasets = list_datasets()
+    available_creators = GRAPH_CREATORS.keys()
+    for dataset_cfg in config["datasets"]:
+        if dataset_cfg["type"] == "loaded":
+            dataset_name = dataset_cfg["name"]
+            if dataset_name.endswith(".db"):
+                dataset_name = dataset_name[:-3]
+            if dataset_name not in available_datasets:
+                raise ValueError(f"Dataset {dataset_name} not found.")
+        else:
+            generator_name = dataset_cfg["generator"]
+            if generator_name not in available_creators:
+                raise ValueError(f"Graph creator {generator_name} not found.")
+            creator_instance = GRAPH_CREATORS[generator_name]()
+            if not creator_instance.validate_parameters(
+                dataset_cfg.get("parameters", {})
+            ):
+                raise ValueError(
+                    f"Invalid parameters for graph creator {generator_name}."
+                )
+
+
 def validate_config(config: dict) -> None:
     if (
         "datasets" not in config
@@ -47,6 +71,8 @@ def validate_config(config: dict) -> None:
     if "analyze" in config and "solvers" not in config:
         raise ValueError("Analyze section found but no solvers defined in config.")
 
+    validate_datasets(config)
+
 
 def solution_exists(solver_name: str, dataset_name: str) -> bool:
     solution_path = os.path.join(SOLUTIONS_FOLDER, dataset_name, f"{solver_name}.csv")
@@ -57,7 +83,11 @@ def main(config_path: Path):
     config = load_config(config_path)
     config_filename = os.path.basename(config_path)[:-5]
 
-    validate_config(config)
+    try:
+        validate_config(config)
+    except ValueError as e:
+        print(f"Config validation error: {e}")
+        return
 
     if len(config["datasets"]) == 1 and config["datasets"][0]["type"] == "loaded":
         dataset_name = config["datasets"][0]["name"]
@@ -67,7 +97,8 @@ def main(config_path: Path):
         print(f"Loaded dataset {dataset_name} with {len(dataset)} graphs.")
     else:
         dataset_name = config_filename + ".db"
-        dataset = SQLiteDataset.from_file(dataset_name)
+        dataset_path = os.path.join(DATASETS_FOLDER, dataset_name)
+        dataset = SQLiteDataset.from_file(dataset_path)
         if len(dataset) > 0:
             print(
                 f"Dataset {dataset_name} already exists with {len(dataset)} graphs. Skipping creation."
@@ -82,7 +113,7 @@ def main(config_path: Path):
                 else:
                     creator_fn = GRAPH_CREATORS[dataset_cfg["generator"]]
                     creator_instance = creator_fn()
-                    creator_instance.create_graphs(
+                    dataset = creator_instance.create_graphs(
                         dataset_cfg.get("parameters", {}), dataset
                     )
 
@@ -123,12 +154,15 @@ def main(config_path: Path):
 
     if "solvers" in config:
         print("Using solvers...")
+        dataset_name_clean = (
+            dataset_name[:-3] if dataset_name.endswith(".db") else dataset_name
+        )
         for solver_cfg in config["solvers"]:
             if not solver_cfg.get("overwrite", False) and solution_exists(
-                solver_cfg["name"], dataset_name
+                solver_cfg["name"], dataset_name_clean
             ):
                 print(
-                    f"Solutions for solver {solver_cfg['name']} on dataset {dataset_name} already exist. Skipping..."
+                    f"Solutions for solver {solver_cfg['name']} on dataset {dataset_name_clean} already exist. Skipping..."
                 )
                 continue
             print(f"Solving with {solver_cfg['name']}...")
@@ -139,7 +173,7 @@ def main(config_path: Path):
                 with graph as G:
                     solutions.append(solver_instance.solve(G))
             solution_file = save_solver_solution(
-                solver_cfg["name"], solutions, dataset_name
+                solver_cfg["name"], solutions, dataset_name_clean
             )
             print(
                 f"Solutions for solver {solver_cfg['name']} saved to {solution_file}."
@@ -149,7 +183,7 @@ def main(config_path: Path):
             print("Analyzing results...")
             chosen_solvers = [solver_cfg["name"] for solver_cfg in config["solvers"]]
             features = config["analyze"].get("features", [])
-            analyzer(dataset_name, dataset, chosen_solvers, features)
+            analyzer(dataset_name_clean, dataset, chosen_solvers, features)
 
     print("All tasks completed.")
 
