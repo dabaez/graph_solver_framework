@@ -1,19 +1,14 @@
-from dataclasses import dataclass
-from typing import NewType, Protocol, runtime_checkable
+from typing import Generic, NewType, Protocol, TypeVar, runtime_checkable
 
 from networkx import Graph
 
 MaximumIndependentSet = NewType("MaximumIndependentSet", list[str])
 
-
-@dataclass
-class Solution:
-    mis: MaximumIndependentSet
-    time: float
+T_Solution = TypeVar("T_Solution", covariant=True)
 
 
 @runtime_checkable
-class Solver(Protocol):
+class Solver(Protocol, Generic[T_Solution]):
     """Base class for solvers."""
 
     def description(self) -> str:
@@ -24,7 +19,7 @@ class Solver(Protocol):
         """
         ...
 
-    def solve(self, graph: Graph) -> Solution:
+    def solve(self, graph: Graph) -> T_Solution:
         """
         Solve the problem using the given dataset.
 
