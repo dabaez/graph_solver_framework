@@ -6,9 +6,12 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "cmake>=4.0.3",
+    "gurobipy>=13.0.0",
     "logzero>=1.7.0",
     "matplotlib>=3.10.7",
     "networkx>=3.5",
+    "ollama>=0.6.1",
+    "pulp>=3.3.0",
     "pybind11[global]>=3.0.0",
     "python-sat>=1.8.dev19",
     "pyyaml>=6.0.3",
