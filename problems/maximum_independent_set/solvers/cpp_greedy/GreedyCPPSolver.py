@@ -3,15 +3,18 @@ import time
 import networkx as nx
 
 from framework.core.registries import register_solver
-from framework.solvers.NodeMappingDecorator import IntSolution, normalize_labels
+from problems.maximum_independent_set.shared.NodeMappingDecorator import (
+    IntSolution,
+    normalize_labels,
+)
 
 try:
-    import framework.solvers.cpp_greedy.mis_greedy_cpp as mis_greedy_cpp
+    import problems.maximum_independent_set.solvers.cpp_greedy.mis_greedy_cpp as mis_greedy_cpp
 except ImportError:
     mis_greedy_cpp = None
 
 
-@register_solver("GreedyCPPSolver")
+@register_solver("MaximumIndependentSetProblem", "GreedyCPPSolver")
 class GreedyCPPSolver:
     def description(self) -> str:
         return "A solver that uses a C++ greedy algorithm to find a maximum independent set. Takes the current lowest degree node and removes it and its neighbors from the graph until no nodes are left."

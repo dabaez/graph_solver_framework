@@ -7,12 +7,16 @@ from pathlib import Path
 import networkx as nx
 
 from framework.core.registries import register_solver
-from framework.solvers.kamis.config import time_limit
-from framework.solvers.NodeMappingDecorator import IntSolution, normalize_labels
+from problems.maximum_independent_set.shared.NodeMappingDecorator import (
+    IntSolution,
+    normalize_labels,
+)
+
+from .config import time_limit
 
 
 def kamis_solver(file: str, name: str, description: str):
-    @register_solver(name)
+    @register_solver("MaximumIndependentSetProblem", name)
     class KamisSolver:
         def description(self) -> str:
             return description

@@ -2,11 +2,13 @@ from typing import Callable, Type
 
 from framework.core.feature_extractor import FeatureExtractor
 from framework.core.graph_creator import GraphCreator
+from framework.core.graph_problem import GraphProblem
 from framework.core.solver import Solver
 
 GRAPH_CREATORS: dict[str, Type[GraphCreator]] = {}
-SOLVERS: dict[str, Type[Solver]] = {}
+SOLVERS: dict[str, dict[str, Type[Solver]]] = {}
 FEATURE_EXTRACTORS: dict[str, Type[FeatureExtractor]] = {}
+PROBLEMS: dict[str, Type[GraphProblem]] = {}
 
 
 def register_graph_creator(
@@ -31,6 +33,7 @@ def register_graph_creator(
 
 
 def register_solver(
+    problem_name: str,
     name: str,
 ) -> Callable[[Type[Solver]], Type[Solver]]:
     """
@@ -41,9 +44,11 @@ def register_solver(
     """
 
     def decorator(solver: Type[Solver]) -> Type[Solver]:
-        if name in SOLVERS:
+        if problem_name in SOLVERS and name in SOLVERS[problem_name]:
             raise ValueError(f"Solver with name '{name}' is already registered.")
-        SOLVERS[name] = solver
+        if problem_name not in SOLVERS:
+            SOLVERS[problem_name] = {}
+        SOLVERS[problem_name][name] = solver
         return solver
 
     return decorator
@@ -68,5 +73,26 @@ def register_feature_extractor(
             )
         FEATURE_EXTRACTORS[name] = extractor
         return extractor
+
+    return decorator
+
+
+def register_problem(
+    name: str,
+) -> Callable[[Type[GraphProblem]], Type[GraphProblem]]:
+    """
+    Decorator to register a graph problem.
+
+    :param name: The name of the graph problem.
+    :return: A decorator that registers the graph problem.
+    """
+
+    def decorator(
+        problem: Type[GraphProblem],
+    ) -> Type[GraphProblem]:
+        if name in PROBLEMS:
+            raise ValueError(f"Graph problem with name '{name}' is already registered.")
+        PROBLEMS[name] = problem
+        return problem
 
     return decorator

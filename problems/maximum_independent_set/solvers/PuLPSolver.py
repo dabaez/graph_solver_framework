@@ -2,15 +2,15 @@ import networkx as nx
 import pulp
 
 from framework.core.registries import register_solver
-from framework.core.solver import MaximumIndependentSet, Solution
+from problems.maximum_independent_set.problem import MaximumIndependentSetSolution
 
 
-@register_solver("PuLPSolver")
+@register_solver("MaximumIndependentSetProblem", "PuLPSolver")
 class PuLPSolver:
     def description(self) -> str:
         return "A solver that uses PuLP to solve the Maximum Independent Set problem via Integer Linear Programming."
 
-    def solve(self, graph: nx.Graph) -> Solution:
+    def solve(self, graph: nx.Graph) -> MaximumIndependentSetSolution:
         prob = pulp.LpProblem("Maximum_Independent_Set", pulp.LpMaximize)
 
         node_vars = {
@@ -25,11 +25,9 @@ class PuLPSolver:
         solver = pulp.PULP_CBC_CMD(msg=False)
         solver.timeLimit = 30
         prob.solve(solver)
-        independent_set = MaximumIndependentSet(
-            [
-                str(node)
-                for node in graph.nodes()
-                if pulp.value(node_vars[str(node)]) == 1
-            ]
+        independent_set = [
+            str(node) for node in graph.nodes() if pulp.value(node_vars[str(node)]) == 1
+        ]
+        return MaximumIndependentSetSolution(
+            set=independent_set, time=prob.solutionTime
         )
-        return Solution(mis=independent_set, time=prob.solutionTime)

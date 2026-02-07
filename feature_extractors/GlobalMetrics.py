@@ -4,7 +4,9 @@ import networkx as nx
 
 from framework.core.feature_extractor import Feature
 from framework.core.registries import register_feature_extractor
-from framework.solvers.cpp_greedy.GreedyCPPSolver import GreedyCPPSolver
+from problems.maximum_independent_set.solvers.cpp_greedy.GreedyCPPSolver import (
+    GreedyCPPSolver,
+)
 
 
 @register_feature_extractor("Logarithm of Nodes and Edges")
@@ -99,7 +101,7 @@ class ApproximateMIS:
         return [
             Feature(
                 name="approximate_mis_size",
-                value=len(solution.mis) / graph.number_of_nodes()
+                value=len(solution.set) / graph.number_of_nodes()
                 if graph.number_of_nodes() > 0
                 else 0,
             )

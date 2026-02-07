@@ -2,17 +2,18 @@ import random
 
 import networkx as nx
 
-from framework.core.solver import MaximumIndependentSet
-from framework.solvers.NoTimeSolverWrapper import solver_from_no_time_solver
+from problems.maximum_independent_set.shared.NoTimeSolverWrapper import (
+    solver_from_no_time_solver,
+)
 
 
 class TestGraphSolver:
     def description(self) -> str:
         return "A test solver that randomly selects nodes to form a maximum independent set."
 
-    def solve(self, graph: nx.Graph) -> MaximumIndependentSet:
+    def solve(self, graph: nx.Graph) -> list[str]:
         valid_nodes = set(graph)
-        response = MaximumIndependentSet([])
+        response = []
         while valid_nodes:
             node = random.choice(list(valid_nodes))
             valid_nodes.remove(node)
@@ -23,5 +24,5 @@ class TestGraphSolver:
 
 
 TestGraphSolverImplementation = solver_from_no_time_solver(
-    TestGraphSolver(), "TestGraphSolver"
+    TestGraphSolver(), "MaximumIndependentSetProblem", "TestGraphSolver"
 )

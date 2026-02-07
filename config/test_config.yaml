@@ -1,3 +1,4 @@
+problem_name: "MaximumIndependentSetProblem"
 datasets:
   - type: "generated"
     generator: "test_creator"

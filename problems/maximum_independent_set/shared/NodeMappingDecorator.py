@@ -4,7 +4,9 @@ from typing import Any, Callable
 
 import networkx as nx
 
-from framework.core.solver import MaximumIndependentSet, Solution
+from problems.maximum_independent_set.problem import (
+    MaximumIndependentSetSolution as Solution,
+)
 
 
 @dataclass
@@ -41,9 +43,7 @@ def normalize_labels(
             result = func(self, normalized_graph)
 
             final_result = Solution(
-                mis=MaximumIndependentSet(
-                    [normalized_to_label[node] for node in result.mis]
-                ),
+                set=[normalized_to_label[node] for node in result.mis],
                 time=result.time,
             )
 

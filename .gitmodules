@@ -1,0 +1,3 @@
+[submodule "problems/maximum_independent_set/solvers/kamis/KaMIS"]
+	path = problems/maximum_independent_set/solvers/kamis/KaMIS
+	url = git@github.com:KarlsruheMIS/KaMIS.git

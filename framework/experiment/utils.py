@@ -7,14 +7,15 @@ import questionary
 from scipy.stats import pearsonr
 
 from framework.core.graph import Dataset
+from framework.core.graph_problem import Solution
 from framework.core.registries import (
     FEATURE_EXTRACTORS,
     GRAPH_CREATORS,
+    PROBLEMS,
     SOLVERS,
 )
 from framework.dataset.SQLiteDataset import SQLiteDataset
 
-from ..core.solver import Solution
 from .config import DATASETS_FOLDER, SOLUTIONS_FOLDER
 
 ##### REGISTRIES #####
@@ -25,14 +26,19 @@ def list_registered_graph_creators():
     return list(GRAPH_CREATORS.keys())
 
 
-def list_registered_dataset_solvers():
+def list_registered_dataset_solvers(problem_name: str):
     """List all registered dataset solvers."""
-    return list(SOLVERS.keys())
+    return list(SOLVERS.get(problem_name, {}).keys())
 
 
 def list_registered_dataset_feature_extractors():
     """List all registered dataset feature extractors."""
     return list(FEATURE_EXTRACTORS.keys())
+
+
+def list_registered_problems():
+    """List all registered problems."""
+    return list(PROBLEMS.keys())
 
 
 ##### DATASET #####
@@ -190,19 +196,20 @@ def save_solver_solution(
     solver_name: str, solution: list[Solution], dataset_name: str
 ) -> str:
     """Save a solver's solution to the solutions folder."""
+    if len(solution) == 0:
+        raise ValueError("Solution list cannot be empty.")
+    columns = solution[0].__dict__().keys()
     dir_path = os.path.join(SOLUTIONS_FOLDER, dataset_name)
     os.makedirs(dir_path, exist_ok=True)
     file_path = os.path.join(dir_path, f"{solver_name}.csv")
     with open(file_path, "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Graph Index", "Solution length", "Time taken", "Solution"])
+        writer.writerow(["Graph Index", *columns])
         for i, sol in enumerate(solution):
             writer.writerow(
                 [
                     i + 1,
-                    len(sol.mis),
-                    sol.time,
-                    ", ".join(sol.mis),
+                    *[str(value) for value in sol.__dict__().values()],
                 ]
             )
     return file_path

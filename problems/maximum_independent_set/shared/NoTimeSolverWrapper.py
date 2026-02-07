@@ -4,7 +4,10 @@ from typing import Protocol, Type
 import networkx as nx
 
 from framework.core.registries import register_solver
-from framework.core.solver import MaximumIndependentSet, Solution, Solver
+from framework.core.solver import Solver
+from problems.maximum_independent_set.problem import (
+    MaximumIndependentSetSolution as Solution,
+)
 
 
 class NoTimeSolver(Protocol):
@@ -18,7 +21,7 @@ class NoTimeSolver(Protocol):
         """
         ...
 
-    def solve(self, graph: nx.Graph) -> MaximumIndependentSet:
+    def solve(self, graph: nx.Graph) -> list[str]:
         """
         Solve the problem using the given dataset.
 
@@ -28,7 +31,9 @@ class NoTimeSolver(Protocol):
         ...
 
 
-def solver_from_no_time_solver(solver: NoTimeSolver, name: str) -> Type[Solver]:
+def solver_from_no_time_solver(
+    solver: NoTimeSolver, problem_name: str, name: str
+) -> Type[Solver]:
     """
     Convert a NoTimeSolver to a Solver.
 
@@ -36,7 +41,7 @@ def solver_from_no_time_solver(solver: NoTimeSolver, name: str) -> Type[Solver]:
     :return: A type that implements the Solver protocol.
     """
 
-    @register_solver(name)
+    @register_solver(problem_name, name)
     class SolverImplementation:
         def description(self) -> str:
             return solver.description()
@@ -45,6 +50,6 @@ def solver_from_no_time_solver(solver: NoTimeSolver, name: str) -> Type[Solver]:
             start_time = time.time()
             mis = solver.solve(graph)
             end_time = time.time()
-            return Solution(mis=MaximumIndependentSet(mis), time=end_time - start_time)
+            return Solution(set=mis, time=end_time - start_time)
 
     return SolverImplementation

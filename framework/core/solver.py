@@ -1,10 +1,10 @@
-from typing import Generic, NewType, Protocol, TypeVar, runtime_checkable
+from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 from networkx import Graph
 
-MaximumIndependentSet = NewType("MaximumIndependentSet", list[str])
+from framework.core.graph_problem import Solution
 
-T_Solution = TypeVar("T_Solution", covariant=True)
+T_Solution = TypeVar("T_Solution", bound=Solution, covariant=True)
 
 
 @runtime_checkable

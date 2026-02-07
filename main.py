@@ -6,9 +6,7 @@ import questionary
 import yaml
 from tqdm import tqdm
 
-import framework.feature_extractors  # noqa: F401
-import framework.graph_creators  # noqa: F401
-import framework.solvers  # noqa: F401
+import _bootstrap  # noqa: F401
 from framework.core.registries import FEATURE_EXTRACTORS, GRAPH_CREATORS, SOLVERS
 from framework.dataset.SQLiteDataset import SQLiteDataset
 from framework.experiment.analyzer import analyzer
@@ -67,6 +65,9 @@ def validate_config(config: dict) -> None:
         or not config["datasets"]
     ):
         raise ValueError("Missing or invalid required key: datasets")
+
+    if "problem_name" not in config and "solvers" in config:
+        raise ValueError("Solvers defined but no problem_name specified in config.")
 
     if "analyze" in config and "solvers" not in config:
         raise ValueError("Analyze section found but no solvers defined in config.")
@@ -166,7 +167,7 @@ def main(config_path: Path):
                 )
                 continue
             print(f"Solving with {solver_cfg['name']}...")
-            solver_fn = SOLVERS[solver_cfg["name"]]
+            solver_fn = SOLVERS[config["problem_name"]][solver_cfg["name"]]
             solver_instance = solver_fn()
             solutions = []
             for graph in tqdm(dataset):

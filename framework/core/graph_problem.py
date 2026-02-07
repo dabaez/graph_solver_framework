@@ -2,11 +2,25 @@ from typing import Generic, Protocol, TypeVar, runtime_checkable
 
 from networkx import Graph
 
-T_Solution = TypeVar("T_Solution", contravariant=True)
+
+@runtime_checkable
+class Solution(Protocol):
+    """Base class for solutions."""
+
+    def __dict__(self) -> dict[str, str]:
+        """
+        Convert the solution to a dictionary for easier comparison and storage.
+
+        :return: A dictionary representation of the solution.
+        """
+        ...
+
+
+SolutionT = TypeVar("SolutionT", bound=Solution, contravariant=True)
 
 
 @runtime_checkable
-class GraphProblem(Protocol, Generic[T_Solution]):
+class GraphProblem(Protocol, Generic[SolutionT]):
     """Base class for graph problems."""
 
     def name(self) -> str:
@@ -21,7 +35,7 @@ class GraphProblem(Protocol, Generic[T_Solution]):
         """
         ...
 
-    def is_valid(self, graph: Graph, solution: T_Solution) -> bool:
+    def is_valid(self, graph: Graph, solution: SolutionT) -> bool:
         """
         Check if the given solution is valid for the graph.
 
@@ -31,7 +45,7 @@ class GraphProblem(Protocol, Generic[T_Solution]):
         """
         ...
 
-    def is_solution_worse(self, solution_a: T_Solution, solution_b: T_Solution) -> bool:
+    def is_solution_worse(self, solution_a: SolutionT, solution_b: SolutionT) -> bool:
         """
         Compare two solutions for the problem.
 

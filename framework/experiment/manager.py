@@ -4,9 +4,7 @@ import numpy as np
 import questionary
 from tqdm import tqdm
 
-import framework.feature_extractors  # noqa: F401
-import framework.graph_creators  # noqa: F401
-import framework.solvers  # noqa: F401
+import _bootstrap  # noqa: F401
 from framework.core.registries import (
     FEATURE_EXTRACTORS,
     GRAPH_CREATORS,
@@ -27,6 +25,7 @@ from .utils import (
     list_registered_dataset_feature_extractors,
     list_registered_dataset_solvers,
     list_registered_graph_creators,
+    list_registered_problems,
     load_dataset,
     merge_datasets,
     plot_feature_correlation_matrix,
@@ -370,20 +369,31 @@ def explore_feature_extractor(extractor_name: str):
 
 
 def explore_solvers():
-    solvers = list_registered_dataset_solvers()
+    problems = list_registered_problems()
+    if not problems:
+        print("No problems available.")
+        return
+    chosen_problem = questionary.select(
+        "Choose a problem to explore solvers for:",
+        choices=[*problems, "Go back"],
+    ).ask()
+    if chosen_problem == "Go back":
+        return
+    solvers = list_registered_dataset_solvers(chosen_problem)
     if not solvers:
         print("No dataset solvers available.")
         return
     chosen_solver = questionary.select(
-        "Choose a dataset solver to explore:", choices=[*solvers, "Go back"]
+        "Choose a dataset solver to explore:",
+        choices=[*solvers, "Go back"],
     ).ask()
     if chosen_solver == "Go back":
         return
-    explore_solver(chosen_solver)
+    explore_solver(chosen_problem, chosen_solver)
 
 
-def explore_solver(solver_name: str):
-    solver_class = SOLVERS.get(solver_name)
+def explore_solver(problem_name: str, solver_name: str):
+    solver_class = SOLVERS.get(problem_name, {}).get(solver_name)
     if not solver_class:
         print(f"Solver '{solver_name}' not found.")
         return
