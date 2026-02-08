@@ -39,7 +39,7 @@ class SATtoMISLoader:
                     file_path = os.path.join(folder_path, filename)
                     graph = self.convert_sat_to_mis(file_path)
                     framework_graph = create_in_memory_graph(
-                        graph, {"source_file": filename}
+                        graph, metadata={"source_file": filename}
                     )
                     writer.add(framework_graph)
 

@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 from typing import Any, Callable, Iterator, Literal, Protocol, TypeVar
 
@@ -16,13 +17,22 @@ class GraphLoader(Protocol):
 
 class FrameworkGraph:
     id: int
+    metadata: dict[str, Any]
     features: dict[str, Any]
     _loader: GraphLoader
 
-    def __init__(self, id: int, features: dict[str, Any], loader: GraphLoader):
+    def __init__(
+        self,
+        id: int,
+        features: dict[str, Any],
+        loader: GraphLoader,
+        metadata: dict[str, Any] | None = None,
+    ):
         self.id = id
         self.features = features
         self._loader = loader
+        self.metadata = metadata if metadata is not None else {}
+        self.metadata["uuid"] = str(uuid.uuid4())
 
     def __enter__(self) -> nx.Graph:
         return self._loader.load()

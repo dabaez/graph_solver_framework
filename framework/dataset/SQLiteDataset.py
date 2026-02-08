@@ -11,6 +11,7 @@ TABLE_NAME = "graphs"
 FEATURES_COLUMN_NAME = "features"
 GRAPH_DATA_COLUMN_NAME = "data"
 ID_COLUMN_NAME = "id"
+METADATA_COLUMN_NAME = "metadata"
 
 
 class SQLiteGraphLoader:
@@ -41,10 +42,13 @@ class SQLiteGraphLoader:
 
 
 def create_sqlite_graph(
-    id: int, conn: sqlite3.Connection, features: dict[str, Any]
+    id: int,
+    conn: sqlite3.Connection,
+    features: dict[str, Any],
+    metadata: dict[str, Any] | None = None,
 ) -> FrameworkGraph:
     loader = SQLiteGraphLoader(id, conn)
-    return FrameworkGraph(id=id, features=features, loader=loader)
+    return FrameworkGraph(id=id, features=features, loader=loader, metadata=metadata)
 
 
 class SQLiteDataset:
@@ -65,7 +69,8 @@ class SQLiteDataset:
             CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
                 {ID_COLUMN_NAME} INTEGER PRIMARY KEY,
                 {FEATURES_COLUMN_NAME} TEXT,
-                {GRAPH_DATA_COLUMN_NAME} BLOB
+                {GRAPH_DATA_COLUMN_NAME} BLOB,
+                {METADATA_COLUMN_NAME} TEXT
             )
             """
         )
@@ -73,13 +78,16 @@ class SQLiteDataset:
 
     def load_graphs(self) -> list[FrameworkGraph]:
         cursor = self.conn.cursor()
-        cursor.execute(f"SELECT {ID_COLUMN_NAME}, features FROM {TABLE_NAME}")
+        cursor.execute(
+            f"SELECT {ID_COLUMN_NAME}, {FEATURES_COLUMN_NAME}, {METADATA_COLUMN_NAME} FROM {TABLE_NAME}"
+        )
         rows = cursor.fetchall()
         graphs = []
         for row in rows:
             id = row[0]
             features = json.loads(row[1]) if row[1] else {}
-            graph = create_sqlite_graph(id, self.conn, features)
+            metadata = json.loads(row[2]) if row[2] else {}
+            graph = create_sqlite_graph(id, self.conn, features, metadata)
             graphs.append(graph)
         return graphs
 
@@ -105,23 +113,25 @@ class SQLiteDataset:
             add_values = []
             for update in add_updates:
                 features = json.dumps(update.graph.features)
+                metadata = json.dumps(update.graph.metadata)
                 with update.graph as g:
                     graph_data = pickle.dumps(g)
-                add_values.append((features, graph_data))
+                add_values.append((features, graph_data, metadata))
             cursor.executemany(
-                f"INSERT INTO {TABLE_NAME} (features, {GRAPH_DATA_COLUMN_NAME}) VALUES (?, ?)",
+                f"INSERT INTO {TABLE_NAME} ({FEATURES_COLUMN_NAME}, {GRAPH_DATA_COLUMN_NAME}, {METADATA_COLUMN_NAME}) VALUES (?, ?, ?)",
                 add_values,
             )
 
         feature_updates = [u for u in updates if u.update_type == "feature_update"]
         if feature_updates:
-            feature_values = []
+            update_values = []
             for update in feature_updates:
                 features = json.dumps(update.graph.features)
-                feature_values.append((features, update.graph.id))
+                metadata = json.dumps(update.graph.metadata)
+                update_values.append((features, metadata, update.graph.id))
             cursor.executemany(
-                f"UPDATE {TABLE_NAME} SET {FEATURES_COLUMN_NAME} = ? WHERE {ID_COLUMN_NAME} = ?",
-                feature_values,
+                f"UPDATE {TABLE_NAME} SET {FEATURES_COLUMN_NAME} = ?, {METADATA_COLUMN_NAME} = ? WHERE {ID_COLUMN_NAME} = ?",
+                update_values,
             )
 
         self.conn.commit()

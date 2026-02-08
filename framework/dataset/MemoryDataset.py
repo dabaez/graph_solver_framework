@@ -19,12 +19,14 @@ class InMemoryGraphLoader:
 
 
 def create_in_memory_graph(
-    graph: nx.Graph, features: dict[str, Any] | None = None
+    graph: nx.Graph,
+    features: dict[str, Any] | None = None,
+    metadata: dict[str, Any] | None = None,
 ) -> FrameworkGraph:
     if features is None:
         features = {}
     loader = InMemoryGraphLoader(graph)
-    return FrameworkGraph(id=-1, features=features, loader=loader)
+    return FrameworkGraph(id=-1, features=features, loader=loader, metadata=metadata)
 
 
 class MemoryDataset:
