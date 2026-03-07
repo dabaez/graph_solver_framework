@@ -18,8 +18,5 @@ dependencies = [
     "questionary>=2.1.0",
     "scikit-learn>=1.7.2",
     "scipy>=1.16.2",
-    "torch>=2.7.1",
-    "torch-geometric>=2.6.1",
-    "torch-scatter>=2.1.2",
     "tqdm>=4.67.1",
 ]

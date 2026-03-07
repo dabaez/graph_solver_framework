@@ -192,23 +192,40 @@ def get_valid_dataset_name_from_user() -> str | None:
 ##### SOLVERS #####
 
 
+def load_solver_solution(
+    problem_name: str, solver_name: str, dataset_name: str
+) -> dict[str, Solution]:
+    """Load a solver's solution from the solutions folder."""
+    file_path = os.path.join(SOLUTIONS_FOLDER, dataset_name, f"{solver_name}.csv")
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Solution file '{file_path}' does not exist.")
+    solution = {}
+    with open(file_path, "r") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            uuid = row["Graph UUID"]
+            sol_data = {k: v for k, v in row.items() if k != "Graph UUID"}
+            solution[uuid] = Solution(**sol_data)
+    return solution
+
+
 def save_solver_solution(
-    solver_name: str, solution: list[Solution], dataset_name: str
+    solver_name: str, solution: dict[str, Solution], dataset_name: str
 ) -> str:
     """Save a solver's solution to the solutions folder."""
     if len(solution) == 0:
-        raise ValueError("Solution list cannot be empty.")
-    columns = solution[0].__dict__().keys()
+        raise ValueError("Solution dict cannot be empty.")
+    columns = solution[next(iter(solution))].__dict__().keys()
     dir_path = os.path.join(SOLUTIONS_FOLDER, dataset_name)
     os.makedirs(dir_path, exist_ok=True)
     file_path = os.path.join(dir_path, f"{solver_name}.csv")
     with open(file_path, "w", newline="") as file:
         writer = csv.writer(file)
-        writer.writerow(["Graph Index", *columns])
-        for i, sol in enumerate(solution):
+        writer.writerow(["Graph UUID", *columns])
+        for uuid, sol in solution.items():
             writer.writerow(
                 [
-                    i + 1,
+                    uuid,
                     *[str(value) for value in sol.__dict__().values()],
                 ]
             )

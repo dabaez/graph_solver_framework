@@ -8,7 +8,7 @@ from framework.core.solver import Solver
 GRAPH_CREATORS: dict[str, Type[GraphCreator]] = {}
 SOLVERS: dict[str, dict[str, Type[Solver]]] = {}
 FEATURE_EXTRACTORS: dict[str, Type[FeatureExtractor]] = {}
-PROBLEMS: dict[str, Type[GraphProblem]] = {}
+PROBLEMS: dict[str, tuple[Type, Type[GraphProblem]]] = {}
 
 
 def register_graph_creator(
@@ -79,7 +79,7 @@ def register_feature_extractor(
 
 def register_problem(
     name: str,
-) -> Callable[[Type[GraphProblem]], Type[GraphProblem]]:
+) -> Callable[[tuple[Type, Type[GraphProblem]]], tuple[Type, Type[GraphProblem]]]:
     """
     Decorator to register a graph problem.
 
@@ -88,11 +88,12 @@ def register_problem(
     """
 
     def decorator(
+        solution: Type,
         problem: Type[GraphProblem],
-    ) -> Type[GraphProblem]:
+    ) -> tuple[Type, Type[GraphProblem]]:
         if name in PROBLEMS:
             raise ValueError(f"Graph problem with name '{name}' is already registered.")
-        PROBLEMS[name] = problem
-        return problem
+        PROBLEMS[name] = (solution, problem)
+        return (solution, problem)
 
     return decorator

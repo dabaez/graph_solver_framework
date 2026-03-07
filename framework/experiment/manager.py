@@ -410,10 +410,10 @@ def explore_solver(problem_name: str, solver_name: str):
     except Exception as e:
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
-    solutions = []
+    solutions = {}
     for graph in tqdm(dataset):
         with graph as g:
-            solutions.append(solver_instance.solve(g))
+            solutions[graph.metadata["uuid"]] = solver_instance.solve(g)
     solution_file = save_solver_solution(solver_name, solutions, dataset_name)
     print(f"Solutions saved to '{solution_file}'.")
 
