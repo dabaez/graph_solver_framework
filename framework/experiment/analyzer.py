@@ -1,7 +1,5 @@
-import csv
 import os
 import sys
-from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import questionary
@@ -9,16 +7,27 @@ from sklearn import tree
 from sklearn.tree import DecisionTreeClassifier
 
 from framework.core.graph import Dataset
+from framework.core.registries import PROBLEMS
 from framework.experiment.config import ANALYSIS_FOLDER, SOLUTIONS_FOLDER
 from framework.experiment.utils import (
     fully_calculated_features,
     list_datasets,
     load_dataset,
+    load_solver_solution,
 )
 
 
-def list_solutions(dataset: str):
+def list_problems(dataset: str) -> list[str]:
     solutions_path = os.path.join(SOLUTIONS_FOLDER, dataset)
+    problems = []
+    for folder in os.listdir(solutions_path):
+        if os.path.isdir(os.path.join(solutions_path, folder)):
+            problems.append(folder)
+    return problems
+
+
+def list_solutions(dataset: str, problem_name: str) -> list[str]:
+    solutions_path = os.path.join(SOLUTIONS_FOLDER, dataset, problem_name)
     solutions = []
     for file in os.listdir(solutions_path):
         if file.endswith(".csv"):
@@ -26,50 +35,18 @@ def list_solutions(dataset: str):
     return solutions
 
 
-@dataclass
-class SolutionLog:
-    graph_index: int
-    solution_length: int
-    time_taken: float
-    solution: list[str]
-
-
-def load_solution(dataset_name: str, solver: str) -> list[SolutionLog]:
-    with open(os.path.join(SOLUTIONS_FOLDER, dataset_name, f"{solver}.csv")) as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader)
-        return [
-            SolutionLog(
-                graph_index=int(row[0]),
-                solution_length=int(row[1]),
-                time_taken=float(row[2]),
-                solution=list(map(str.strip, row[3].split(","))),
-            )
-            for row in reader
-        ]
-
-
-def compare_solutions(sol1: SolutionLog, sol2: SolutionLog) -> int:
-    if sol1.solution_length > sol2.solution_length:
-        return -1
-    elif sol1.solution_length < sol2.solution_length:
-        return 1
-    else:
-        # solutions have the same length, compare by time with 5 seconds tolerance
-        if sol1.time_taken + 5.0 < sol2.time_taken:
-            return -1
-        elif sol1.time_taken > sol2.time_taken + 5.0:
-            return 1
-        else:
-            return 0
-
-
 def analyzer(
-    dataset_name: str, dataset: Dataset, solvers: list[str], features: list[str]
+    dataset_name: str,
+    dataset: Dataset,
+    problem_name: str,
+    solvers: list[str],
+    features: list[str],
 ):
     solutions_logs = {}
     for solver in solvers:
-        solutions_logs[solver] = load_solution(dataset_name, solver)
+        solutions_logs[solver] = load_solver_solution(
+            problem_name, solver, dataset_name
+        )
         assert len(solutions_logs[solver]) == len(dataset), (
             f"Solution log for {solver} is not complete"
         )
@@ -81,6 +58,8 @@ def analyzer(
             feature_vector.append(graph.features[feature])
         X.append(feature_vector)
 
+    problem = PROBLEMS[problem_name].problem()
+
     for solver in solvers:
         places = []
         for i, graph in enumerate(dataset):
@@ -88,7 +67,7 @@ def analyzer(
             for other_solver in solvers:
                 if other_solver == solver:
                     continue
-                cmp = compare_solutions(
+                cmp = problem.is_solution_worse(
                     solutions_logs[solver][i], solutions_logs[other_solver][i]
                 )
                 if cmp > 0:
@@ -125,7 +104,7 @@ def analyzer(
             if best_solver is None:
                 best_solver = solver
             else:
-                cmp = compare_solutions(
+                cmp = problem.is_solution_worse(
                     solutions_logs[solver][i], solutions_logs[best_solver][i]
                 )
                 if cmp < 0:
@@ -164,9 +143,17 @@ if __name__ == "__main__":
     loaded_dataset = load_dataset(dataset)
 
     if len(sys.argv) > 2:
-        chosen_solvers = sys.argv[2].split(",")
+        problem_name = sys.argv[2]
     else:
-        solutions = list_solutions(dataset)
+        problems = list_problems(dataset)
+        problem_name = questionary.select(
+            "Select a problem to analyze", choices=problems
+        ).ask()
+
+    if len(sys.argv) > 3:
+        chosen_solvers = sys.argv[3].split(",")
+    else:
+        solutions = list_solutions(dataset, problem_name)
         if len(solutions) == 0:
             print("Can't analyze dataset with no solutions")
             exit()
@@ -179,8 +166,8 @@ if __name__ == "__main__":
             if len(chosen_solvers) == 0:
                 print("Need to choose solutions to analyze")
 
-    if len(sys.argv) > 3:
-        chosen_features = sys.argv[3].split(",")
+    if len(sys.argv) > 4:
+        chosen_features = sys.argv[4].split(",")
     else:
         fcf = fully_calculated_features(loaded_dataset)
         if len(fcf) == 0:
@@ -193,4 +180,4 @@ if __name__ == "__main__":
             if len(chosen_features) == 0:
                 print("Need to choose features to analyze")
 
-    analyzer(dataset, loaded_dataset, chosen_solvers, chosen_features)
+    analyzer(dataset, loaded_dataset, problem_name, chosen_solvers, chosen_features)

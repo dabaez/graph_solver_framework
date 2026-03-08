@@ -1,4 +1,4 @@
-from typing import Generic, Protocol, TypeVar, runtime_checkable
+from typing import Generic, NamedTuple, Protocol, Type, TypeVar, runtime_checkable
 
 from networkx import Graph
 
@@ -54,3 +54,8 @@ class GraphProblem(Protocol, Generic[SolutionT]):
         :return: True if solution_a is worse than solution_b, False otherwise.
         """
         ...
+
+
+class FullProblemDefinition(NamedTuple):
+    solution: Type[Solution]
+    problem: Type[GraphProblem]

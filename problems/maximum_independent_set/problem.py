@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from typing import Type
 
 from networkx import Graph
 
+from framework.core.graph_problem import FullProblemDefinition
 from framework.core.registries import register_problem
 
 
@@ -18,7 +20,6 @@ class MaximumIndependentSetSolution:
         }
 
 
-@register_problem("MaximumIndependentSetProblem")
 class MaximumIndependentSetProblem:
     def name(self) -> str:
         return "Maximum Independent Set"
@@ -48,3 +49,9 @@ class MaximumIndependentSetProblem:
         if solution_a.time > solution_b.time + 5:
             return True
         return False
+
+
+@register_problem("maximum_independent_set")
+class MaximumIndependentSetDefinition(FullProblemDefinition):
+    solution: Type[MaximumIndependentSetSolution] = MaximumIndependentSetSolution
+    problem: Type[MaximumIndependentSetProblem] = MaximumIndependentSetProblem

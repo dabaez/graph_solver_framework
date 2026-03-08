@@ -96,11 +96,43 @@ def extend_dataset(dataset: Dataset, dataset_from: Dataset) -> None:
             writer.add(graph)
 
 
-def extend_dataset_with_path(dataset: Dataset, additional_datasets: list[str]) -> None:
+def import_solutions(to_dataset_name: str, from_dataset_name: str):
+    """Import solutions from one dataset to another."""
+    from_dataset_solutions_path = os.path.join(SOLUTIONS_FOLDER, from_dataset_name)
+    to_dataset_solutions_path = os.path.join(SOLUTIONS_FOLDER, to_dataset_name)
+    if not os.path.exists(from_dataset_solutions_path):
+        print(f"No solutions found for dataset '{from_dataset_name}'.")
+        return
+    if not os.path.exists(to_dataset_solutions_path):
+        os.makedirs(to_dataset_solutions_path)
+    from_dataset_problems = os.listdir(from_dataset_solutions_path)
+    for problem in from_dataset_problems:
+        problem_name = problem
+        from_problem_solutions_path = os.path.join(from_dataset_solutions_path, problem)
+        to_problem_solutions_path = os.path.join(to_dataset_solutions_path, problem)
+        if not os.path.exists(to_problem_solutions_path):
+            os.makedirs(to_problem_solutions_path)
+        for solution_file in os.listdir(from_problem_solutions_path):
+            solver = solution_file[:-4]
+            solutions = load_solver_solution(problem_name, solver, from_dataset_name)
+            to_solution_file_path = os.path.join(
+                to_problem_solutions_path, solution_file
+            )
+            if os.path.exists(to_solution_file_path):
+                solutions.update(
+                    load_solver_solution(problem_name, solver, to_dataset_name)
+                )
+            save_solver_solution(solver, solutions, to_dataset_name, problem_name)
+
+
+def extend_dataset_with_path(
+    dataset_name: str, dataset: Dataset, additional_datasets: list[str]
+) -> None:
     """Extend a dataset with additional datasets."""
     for name in additional_datasets:
         additional_dataset = load_dataset(name)
         extend_dataset(dataset, additional_dataset)
+        import_solutions(dataset_name, name)
 
 
 def merge_datasets(dataset_names: list[str], new_dataset_name: str) -> Dataset:
@@ -108,7 +140,7 @@ def merge_datasets(dataset_names: list[str], new_dataset_name: str) -> Dataset:
     merged_dataset = SQLiteDataset.from_file(
         file_path=os.path.join(DATASETS_FOLDER, f"{new_dataset_name}.db")
     )
-    extend_dataset_with_path(merged_dataset, dataset_names)
+    extend_dataset_with_path(new_dataset_name, merged_dataset, dataset_names)
     return merged_dataset
 
 
@@ -192,31 +224,45 @@ def get_valid_dataset_name_from_user() -> str | None:
 ##### SOLVERS #####
 
 
+def solution_exists(problem_name: str, solver_name: str, dataset_name: str) -> bool:
+    """Check if a solution for a solver exists in the solutions folder."""
+    file_path = os.path.join(
+        SOLUTIONS_FOLDER, dataset_name, problem_name, f"{solver_name}.csv"
+    )
+    return os.path.exists(file_path)
+
+
 def load_solver_solution(
     problem_name: str, solver_name: str, dataset_name: str
 ) -> dict[str, Solution]:
     """Load a solver's solution from the solutions folder."""
-    file_path = os.path.join(SOLUTIONS_FOLDER, dataset_name, f"{solver_name}.csv")
+    file_path = os.path.join(
+        SOLUTIONS_FOLDER, dataset_name, problem_name, f"{solver_name}.csv"
+    )
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"Solution file '{file_path}' does not exist.")
+    ProblemSolutionClass = PROBLEMS[problem_name].solution
     solution = {}
     with open(file_path, "r") as file:
         reader = csv.DictReader(file)
         for row in reader:
             uuid = row["Graph UUID"]
             sol_data = {k: v for k, v in row.items() if k != "Graph UUID"}
-            solution[uuid] = Solution(**sol_data)
+            solution[uuid] = ProblemSolutionClass(**sol_data)
     return solution
 
 
 def save_solver_solution(
-    solver_name: str, solution: dict[str, Solution], dataset_name: str
+    solver_name: str,
+    solution: dict[str, Solution],
+    dataset_name: str,
+    problem_name: str,
 ) -> str:
     """Save a solver's solution to the solutions folder."""
     if len(solution) == 0:
         raise ValueError("Solution dict cannot be empty.")
     columns = solution[next(iter(solution))].__dict__().keys()
-    dir_path = os.path.join(SOLUTIONS_FOLDER, dataset_name)
+    dir_path = os.path.join(SOLUTIONS_FOLDER, dataset_name, problem_name)
     os.makedirs(dir_path, exist_ok=True)
     file_path = os.path.join(dir_path, f"{solver_name}.csv")
     with open(file_path, "w", newline="") as file:

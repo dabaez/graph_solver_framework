@@ -2,13 +2,13 @@ from typing import Callable, Type
 
 from framework.core.feature_extractor import FeatureExtractor
 from framework.core.graph_creator import GraphCreator
-from framework.core.graph_problem import GraphProblem
+from framework.core.graph_problem import FullProblemDefinition
 from framework.core.solver import Solver
 
 GRAPH_CREATORS: dict[str, Type[GraphCreator]] = {}
 SOLVERS: dict[str, dict[str, Type[Solver]]] = {}
 FEATURE_EXTRACTORS: dict[str, Type[FeatureExtractor]] = {}
-PROBLEMS: dict[str, tuple[Type, Type[GraphProblem]]] = {}
+PROBLEMS: dict[str, Type[FullProblemDefinition]] = {}
 
 
 def register_graph_creator(
@@ -79,7 +79,7 @@ def register_feature_extractor(
 
 def register_problem(
     name: str,
-) -> Callable[[tuple[Type, Type[GraphProblem]]], tuple[Type, Type[GraphProblem]]]:
+) -> Callable[[Type[FullProblemDefinition]], Type[FullProblemDefinition]]:
     """
     Decorator to register a graph problem.
 
@@ -88,12 +88,11 @@ def register_problem(
     """
 
     def decorator(
-        solution: Type,
-        problem: Type[GraphProblem],
-    ) -> tuple[Type, Type[GraphProblem]]:
+        problem_definition: Type[FullProblemDefinition],
+    ) -> Type[FullProblemDefinition]:
         if name in PROBLEMS:
             raise ValueError(f"Graph problem with name '{name}' is already registered.")
-        PROBLEMS[name] = (solution, problem)
-        return (solution, problem)
+        PROBLEMS[name] = problem_definition
+        return problem_definition
 
     return decorator

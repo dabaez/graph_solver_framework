@@ -27,10 +27,12 @@ from .utils import (
     list_registered_graph_creators,
     list_registered_problems,
     load_dataset,
+    load_solver_solution,
     merge_datasets,
     plot_feature_correlation_matrix,
     rename_dataset,
     save_solver_solution,
+    solution_exists,
 )
 
 
@@ -182,7 +184,7 @@ def explore_dataset(dataset_name: str):
         if not datasets_to_extend:
             print("No datasets selected for extension.")
             return
-        extend_dataset_with_path(dataset, datasets_to_extend)
+        extend_dataset_with_path(dataset_name, dataset, datasets_to_extend)
     elif chosen_option == "Delete this dataset":
         if questionary.confirm(
             f"Are you sure you want to delete the dataset '{dataset_name}'?"
@@ -410,11 +412,22 @@ def explore_solver(problem_name: str, solver_name: str):
     except Exception as e:
         print(f"Error loading dataset '{dataset_name}': {e}")
         return
-    solutions = {}
+    overwrite_solutions = True
+    if solution_exists(problem_name, solver_name, dataset_name):
+        overwrite_solutions = questionary.confirm(
+            f"Solutions for solver '{solver_name}' on dataset '{dataset_name}' already exist. Do you want to overwrite them or fill missing solutions?"
+        ).ask()
+    if overwrite_solutions:
+        solutions = {}
+    else:
+        solutions = load_solver_solution(problem_name, solver_name, dataset_name)
     for graph in tqdm(dataset):
         with graph as g:
-            solutions[graph.metadata["uuid"]] = solver_instance.solve(g)
-    solution_file = save_solver_solution(solver_name, solutions, dataset_name)
+            if graph.metadata["uuid"] not in solutions:
+                solutions[graph.metadata["uuid"]] = solver_instance.solve(g)
+    solution_file = save_solver_solution(
+        solver_name, solutions, dataset_name, problem_name
+    )
     print(f"Solutions saved to '{solution_file}'.")
 
 
