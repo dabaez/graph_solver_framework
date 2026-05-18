@@ -7,6 +7,17 @@ import networkx as nx
 from framework.core.feature_extractor import Feature, FeatureExtractor
 from framework.core.registries import register_feature_extractor
 
+LOCAL_METRIC_SUFFIXES = [
+    "mean",
+    "std_dev",
+    "min",
+    "max",
+    "log_abs_skew",
+    "skew_positive",
+    "log_kurtosis",
+    "const",
+]
+
 
 class LocalMetricsFeatureExtractor(Protocol):
     def description(self) -> str: ...
@@ -25,16 +36,7 @@ def statistical_measures_from_list(
             return feature_extractor.description()
 
         def feature_names(self) -> list[str]:
-            return [
-                f"{feature_extractor.name()}_mean",
-                f"{feature_extractor.name()}_std_dev",
-                f"{feature_extractor.name()}_min",
-                f"{feature_extractor.name()}_max",
-                f"{feature_extractor.name()}_log_abs_skew",
-                f"{feature_extractor.name()}_skew_positive",
-                f"{feature_extractor.name()}_log_kurtosis",
-                f"{feature_extractor.name()}_const",
-            ]
+            return [f"{feature_extractor.name()}_{s}" for s in LOCAL_METRIC_SUFFIXES]
 
         def extract_features(self, graph: nx.Graph) -> list[Feature]:
             values = feature_extractor.extract_features(graph)
@@ -85,7 +87,7 @@ class AverageDegreeConnectivity:
         return "Extracts the average degree connectivity of the graph."
 
     def name(self) -> str:
-        return "Average Degree Connectivity"
+        return "average_degree_connectivity"
 
     def extract_features(self, graph: nx.Graph) -> list[float]:
         return list(nx.average_degree_connectivity(graph).values())
@@ -101,13 +103,13 @@ class NodeDegree:
         return "Extracts the node degrees of the graph."
 
     def name(self) -> str:
-        return "Node Degree"
+        return "node_degree"
 
     def extract_features(self, graph: nx.Graph) -> list[float]:
         degrees = graph.degree
         if isinstance(degrees, int):
             return [degrees]
-        return [d for n, d in degrees]
+        return [d for _, d in degrees]
 
 
 NodeDegreeFeatureExtractor = statistical_measures_from_list(NodeDegree())
@@ -118,7 +120,7 @@ class ClusteringCoefficient:
         return "Extracts the clustering coefficients of the graph."
 
     def name(self) -> str:
-        return "Clustering Coefficient"
+        return "clustering_coefficient"
 
     def extract_features(self, graph: nx.Graph) -> list[float]:
         n = graph.number_of_nodes()
@@ -138,7 +140,7 @@ class AverageNeighborDegree:
         return "Extracts the average neighbor degrees of the graph."
 
     def name(self) -> str:
-        return "Average Neighbor Degree"
+        return "average_neighbor_degree"
 
     def extract_features(self, graph: nx.Graph) -> list[float]:
         nodes_with_neighbors = [
@@ -159,7 +161,7 @@ class CoreNumber:
         return "Extracts the core numbers of the graph."
 
     def name(self) -> str:
-        return "Core Number"
+        return "core_number"
 
     def extract_features(self, graph: nx.Graph) -> list[float]:
         return list(nx.core_number(graph).values())

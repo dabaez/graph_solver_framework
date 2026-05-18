@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("StarRandomParametersGenerator")
+@register_graph_creator("star_random")
 class StarRandomParametersGenerator:
     def description(self) -> str:
         return "Generates Star Graphs with random parameters within specified ranges."

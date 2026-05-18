@@ -16,7 +16,7 @@ from .config import time_limit
 
 
 def kamis_solver(file: str, name: str, description: str):
-    @register_solver("MaximumIndependentSetProblem", name)
+    @register_solver("maximum_independent_set", name)
     class KamisSolver:
         def description(self) -> str:
             return description

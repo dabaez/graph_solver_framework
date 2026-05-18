@@ -5,7 +5,7 @@ from framework.core.registries import register_solver
 from problems.maximum_independent_set.problem import MaximumIndependentSetSolution
 
 
-@register_solver("MaximumIndependentSetProblem", "PuLPSolver")
+@register_solver("maximum_independent_set", "PuLPSolver")
 class PuLPSolver:
     def description(self) -> str:
         return "A solver that uses PuLP to solve the Maximum Independent Set problem via Integer Linear Programming."

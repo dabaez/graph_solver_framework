@@ -10,7 +10,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("SATtoMISLoader")
+@register_graph_creator("sat_to_mis")
 class SATtoMISLoader:
     def description(self) -> str:
         return "Loads a dataset of SAT instances and converts them to Maximum Independent Set (MIS) instances."

@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("WattsStrogatzGenerator")
+@register_graph_creator("watts_strogatz")
 class WattsStrogatzGenerator:
     def description(self) -> str:
         return "Generates Watts-Strogatz graphs with specified parameters."
@@ -75,7 +75,7 @@ class WattsStrogatzGenerator:
         return dataset
 
 
-@register_graph_creator("WattsStrogatzRandomParametersGenerator")
+@register_graph_creator("watts_strogatz_random")
 class WattsStrogatzRandomParametersGenerator:
     def description(self) -> str:
         return "Generates Watts-Strogatz graphs with random parameters within specified ranges."

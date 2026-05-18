@@ -14,7 +14,7 @@ except ImportError:
     mis_greedy_cpp = None
 
 
-@register_solver("MaximumIndependentSetProblem", "GreedyCPPSolver")
+@register_solver("maximum_independent_set", "GreedyCPPSolver")
 class GreedyCPPSolver:
     def description(self) -> str:
         return "A solver that uses a C++ greedy algorithm to find a maximum independent set. Takes the current lowest degree node and removes it and its neighbors from the graph until no nodes are left."

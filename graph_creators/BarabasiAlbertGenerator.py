@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("BarabasiAlbertGenerator")
+@register_graph_creator("barabasi_albert")
 class BarabasiAlbertGenerator:
     def description(self) -> str:
         return "Generates Barabasi-Albert graphs with specified parameters."
@@ -85,7 +85,7 @@ class BarabasiAlbertGenerator:
         return dataset
 
 
-@register_graph_creator("BarabasiAlbertRandomParametersGenerator")
+@register_graph_creator("barabasi_albert_random")
 class BarabasiAlbertRandomParametersGenerator:
     def description(self) -> str:
         return "Generates Barabasi-Albert graphs with random parameters kept within specified ranges."

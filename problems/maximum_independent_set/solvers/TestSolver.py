@@ -24,5 +24,5 @@ class TestGraphSolver:
 
 
 TestGraphSolverImplementation = solver_from_no_time_solver(
-    TestGraphSolver(), "MaximumIndependentSetProblem", "TestGraphSolver"
+    TestGraphSolver(), "maximum_independent_set", "TestGraphSolver"
 )

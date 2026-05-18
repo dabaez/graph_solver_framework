@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("ErdosRenyiRandomParametersGenerator")
+@register_graph_creator("erdos_renyi_random")
 class ErdosRenyiRandomParametersGenerator:
     def description(self) -> str:
         return "Generates Erdos-Renyi graphs with random parameters kept within specified ranges."

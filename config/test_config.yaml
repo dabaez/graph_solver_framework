@@ -1,20 +1,20 @@
-problem_name: "MaximumIndependentSetProblem"
+problem_name: "maximum_independent_set"
 datasets:
   - type: "generated"
     generator: "test_creator"
 feature_extractors:
-  - name: "Logarithm of Nodes and Edges"
+  - name: "logarithm_of_nodes_and_edges"
     overwrite: true
-  - name: "Graph Conectivity"
-  - name: "Chromatic Number"
-  - name: "Graph Assortativity"
-  - name: "Approximate MIS"
-  - name: "Laplacian Eigenvalues"
-  - name: "Average Degree Connectivity"
-  - name: "Node Degree"
-  - name: "Clustering Coefficient"
-  - name: "Average Neighbor Degree"
-  - name: "Core Number"
+  - name: "graph_connectivity"
+  - name: "chromatic_number"
+  - name: "graph_assortativity"
+  - name: "approximate_mis"
+  - name: "laplacian_eigenvalues"
+  - name: "average_degree_connectivity"
+  - name: "node_degree"
+  - name: "clustering_coefficient"
+  - name: "average_neighbor_degree"
+  - name: "core_number"
 solvers:
   - name: "GreedyCPPSolver"
     overwrite: true

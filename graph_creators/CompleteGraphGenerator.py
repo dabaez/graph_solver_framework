@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("CompleteGraphRandomParametersGenerator")
+@register_graph_creator("complete_graph_random")
 class CompleteGraphRandomParametersGenerator:
     def description(self) -> str:
         return "Generates complete graphs with a random number of nodes within specified bounds."

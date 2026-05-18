@@ -9,7 +9,7 @@ from problems.maximum_independent_set.solvers.cpp_greedy.GreedyCPPSolver import 
 )
 
 
-@register_feature_extractor("Logarithm of Nodes and Edges")
+@register_feature_extractor("logarithm_of_nodes_and_edges")
 class LogarithmOfNodesAndEdges:
     def description(self) -> str:
         return "Extracts the logarithm (base 10) of the number of nodes and edges in the graph."
@@ -33,7 +33,7 @@ class LogarithmOfNodesAndEdges:
         return [log_num_nodes, log_num_edges]
 
 
-@register_feature_extractor("Graph Conectivity")
+@register_feature_extractor("graph_connectivity")
 class GraphConectivity:
     def description(self) -> str:
         return "Extracts whether the graph is connected and the number of connected components."
@@ -50,7 +50,7 @@ class GraphConectivity:
         ]
 
 
-@register_feature_extractor("Chromatic Number")
+@register_feature_extractor("chromatic_number")
 class ChromaticNumber:
     def description(self) -> str:
         return "Extracts the chromatic number of the graph normalized by the number of nodes."
@@ -71,7 +71,7 @@ class ChromaticNumber:
         ]
 
 
-@register_feature_extractor("Graph Assortativity")
+@register_feature_extractor("graph_assortativity")
 class GraphAssortativity:
     def description(self) -> str:
         return "Extracts the assortativity coefficient of the graph."
@@ -88,7 +88,7 @@ class GraphAssortativity:
         ]
 
 
-@register_feature_extractor("Approximate MIS")
+@register_feature_extractor("approximate_mis")
 class ApproximateMIS:
     def description(self) -> str:
         return "Extracts the size of an approximate maximum independent set (MIS) of the graph normalized by the number of nodes."
@@ -108,7 +108,7 @@ class ApproximateMIS:
         ]
 
 
-@register_feature_extractor("Laplacian Eigenvalues")
+@register_feature_extractor("laplacian_eigenvalues")
 class LaplacianEigenvalues:
     def description(self) -> str:
         return "Extracts the logarithm (base 10) of the largest and second smallest eigenvalues of the graph Laplacian normalized by the average node degree, and the logarithm of the eigenvalue ratio."

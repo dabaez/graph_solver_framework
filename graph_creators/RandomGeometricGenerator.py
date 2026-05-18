@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("RandomGeometricRandomParametersGenerator")
+@register_graph_creator("random_geometric_random")
 class RandomGeometricRandomParametersGenerator:
     def description(self) -> str:
         return "Generates Random Geometric Graphs with random parameters within specified ranges."

@@ -4,7 +4,9 @@ import numpy as np
 import questionary
 from tqdm import tqdm
 
-import _bootstrap  # noqa: F401
+import feature_extractors  # noqa: F401
+import graph_creators  # noqa: F401
+import problems  # noqa: F401
 from framework.core.registries import (
     FEATURE_EXTRACTORS,
     GRAPH_CREATORS,

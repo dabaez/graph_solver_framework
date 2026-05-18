@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("BarbellRandomParametersGenerator")
+@register_graph_creator("barbell_random")
 class BarbellRandomParametersGenerator:
     def description(self) -> str:
         return (

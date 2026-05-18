@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("DIMACStoMISLoader")
+@register_graph_creator("dimacs_to_mis")
 class DIMACStoMISLoader:
     def description(self) -> str:
         return "Loads a dataset of DIMACS Maximum Clique instances and converts them to Maximum Independent Set (MIS) instances."

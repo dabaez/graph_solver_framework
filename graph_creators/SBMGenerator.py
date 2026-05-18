@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("SBMRandomParametersGenerator")
+@register_graph_creator("sbm_random")
 class SBMRandomParametersGenerator:
     def description(self) -> str:
         return "Generates Stochastic Block Model graphs with random parameters within specified ranges."

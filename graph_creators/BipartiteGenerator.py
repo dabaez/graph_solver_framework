@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("BipartiteRandomParametersGenerator")
+@register_graph_creator("bipartite_random")
 class BipartiteRandomParametersGenerator:
     def description(self) -> str:
         return (

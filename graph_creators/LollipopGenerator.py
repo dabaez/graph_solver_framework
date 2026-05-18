@@ -8,7 +8,7 @@ from framework.core.registries import register_graph_creator
 from framework.dataset.MemoryDataset import create_in_memory_graph
 
 
-@register_graph_creator("LollipopRandomParametersGenerator")
+@register_graph_creator("lollipop_random")
 class LollipopRandomParametersGenerator:
     def description(self) -> str:
         return (
